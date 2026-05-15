@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: careeruser
+      POSTGRES_PASSWORD: careerpass
+      POSTGRES_DB: careerdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docs/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: careeruser
+      MONGO_INITDB_ROOT_PASSWORD: careerpass
+      MONGO_INITDB_DATABASE: careerdb
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass careerpass
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI at http://localhost:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: careeruser
+      RABBITMQ_DEFAULT_PASS: careerpass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  mongo_data:
+  rabbitmq_data:

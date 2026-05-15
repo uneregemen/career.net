@@ -1,0 +1,53 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: job-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:careerdb}
+    username: ${DB_USERNAME:careeruser}
+    password: ${DB_PASSWORD:careerpass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:careerpass}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:careeruser}
+    password: ${RABBITMQ_PASSWORD:careerpass}
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000   # 1 hour default TTL
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID:local}/.well-known/jwks.json
+
+rabbitmq:
+  queue:
+    job-created: ${RABBITMQ_QUEUE_JOB_CREATED:job.created}
+
+cache:
+  ttl:
+    job: 3600        # seconds
+    city-jobs: 900   # 15 min
+    search: 600      # 10 min
