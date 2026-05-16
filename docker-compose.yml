@@ -1,18 +1,6 @@
 version: '3.9'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: careeruser
-      POSTGRES_PASSWORD: careerpass
-      POSTGRES_DB: careerdb
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docs/init.sql:/docker-entrypoint-initdb.d/init.sql
-
   mongodb:
     image: mongo:7
     ports:
@@ -42,6 +30,5 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
 
 volumes:
-  postgres_data:
   mongo_data:
   rabbitmq_data:
