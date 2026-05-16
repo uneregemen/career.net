@@ -7,7 +7,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb+srv://uneregeemen_db_user:egemen3524@careernet.lsxwi7v.mongodb.net/?appName=careernet
+      uri: ${MONGO_URI:}
       database: ${MONGO_DATABASE:careerdb}
 
   security:
