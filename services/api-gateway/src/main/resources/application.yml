@@ -1,0 +1,66 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID:local}/.well-known/jwks.json
+
+  cloud:
+    gateway:
+      # Global CORS — frontend'in farklı port'tan istek atmasına izin verir
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "https://career.net"
+            allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            allowedHeaders: ["*"]
+            allowCredentials: true
+
+      routes:
+        # ── Job Service ───────────────────────────────────────────────────────
+        - id: job-service
+          uri: ${JOB_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/jobs/**
+
+        # ── Search Service ────────────────────────────────────────────────────
+        - id: search-service
+          uri: ${SEARCH_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/search/**
+
+        # ── Notification Service — bildirimler ve alarmlar ───────────────────
+        - id: notification-service-notifications
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/notifications/**
+
+        - id: notification-service-alerts
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/alerts/**
+
+        - id: notification-service-scheduler
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/scheduler/**
+
+        # ── Admin Service ─────────────────────────────────────────────────────
+        - id: admin-service
+          uri: ${ADMIN_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/admin/**
+
+        # ── AI Agent Service ──────────────────────────────────────────────────
+        - id: ai-agent-service
+          uri: ${AI_AGENT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/ai/**
