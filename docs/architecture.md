@@ -10,15 +10,15 @@
 | Frontend framework | Next.js | 14 | React-based UI with app router |
 | Frontend language | TypeScript | 5.x | Type-safe frontend code |
 | Frontend styling | Tailwind CSS + shadcn/ui | — | Utility-first CSS + component library |
-| Primary database | PostgreSQL | 16 | Relational data: jobs, companies, users, alerts, notifications |
-| NoSQL database | MongoDB | 7 | Search history + AI chat sessions |
-| Cache | Redis | 7 | Distributed job posting cache |
-| Message queue | RabbitMQ | 3 | Async event: new job → notification pipeline |
+| Primary database | **Supabase** (PostgreSQL 16) | — | Relational data: jobs, companies, users, alerts, notifications |
+| NoSQL database | **MongoDB Atlas** | 7 | Search history + AI chat sessions |
+| Cache | Redis (Upstash / AWS ElastiCache) | 7 | Distributed job posting cache |
+| Message queue | RabbitMQ (local Docker / Amazon MQ) | 3 | Async event: new job → notification pipeline |
 | Authentication | AWS Cognito | — | User pool, JWT issuance, JWKS validation |
 | AI model | Google Gemini | gemini-1.5-flash | AI agent chat (tool calling via REST API) |
 | Geolocation | OpenStreetMap Nominatim | — | Free reverse geocoding (no API key) |
 | Containerization | Docker | — | One Dockerfile per service |
-| Cloud platform | AWS | — | ECS Fargate, RDS, ElastiCache, Amazon MQ, ECR |
+| Cloud platform | AWS | — | ECS Fargate, ElastiCache, Amazon MQ, ECR |
 | Scheduling | AWS EventBridge Scheduler | — | Triggers notification scheduled tasks |
 
 ---
@@ -198,13 +198,14 @@ Application Load Balancer (public)
        ↓
 Route 53 (career.net domain)
 
-Managed services:
-  AWS RDS PostgreSQL      — primary DB
-  AWS ElastiCache Redis   — job cache
+External managed services:
+  Supabase (PostgreSQL)   — primary DB (cloud, not AWS RDS)
+  MongoDB Atlas           — NoSQL search history + AI sessions
+  Upstash / ElastiCache   — Redis job cache
   Amazon MQ (RabbitMQ)    — message queue
-  MongoDB Atlas           — NoSQL (external, free tier)
   AWS Cognito             — auth
   AWS EventBridge         — cron triggers for notification tasks
+  Google Gemini API       — AI model for chat agent
 ```
 
 Each service has its own `Dockerfile` using a multi-stage Maven build:

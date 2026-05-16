@@ -1,0 +1,26 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: ai-agent-service
+
+  data:
+    mongodb:
+      uri: ${MONGO_URI:}
+      database: ${MONGO_DATABASE:careerdb}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID:local}/.well-known/jwks.json
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+  model: gemini-1.5-flash
+
+services:
+  search-service-url: ${SEARCH_SERVICE_URL:http://localhost:8082}
+  job-service-url: ${JOB_SERVICE_URL:http://localhost:8081}
