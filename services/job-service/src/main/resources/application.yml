@@ -21,9 +21,8 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:careerpass}
+      # rediss:// (çift s) = SSL/TLS — Upstash için zorunlu
+      url: ${REDIS_URL}
 
   rabbitmq:
     # amqps:// prefix'i Spring Boot'a SSL kullan demektir (CloudAMQP için gerekli)
