@@ -5,16 +5,14 @@ spring:
   application:
     name: ai-agent-service
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
   data:
     mongodb:
       uri: ${MONGO_URI:}
       database: ${MONGO_DATABASE:careerdb}
-
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: https://cognito-idp.${AWS_REGION:us-east-1}.amazonaws.com/${COGNITO_USER_POOL_ID:local}/.well-known/jwks.json
 
 gemini:
   api-key: ${GEMINI_API_KEY}

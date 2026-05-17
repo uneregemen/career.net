@@ -1,0 +1,35 @@
+{
+  "family": "career-net-frontend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "frontend",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/career-net-frontend:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NEXT_PUBLIC_API_URL",              "value": "https://api.career.net" },
+        { "name": "NEXT_PUBLIC_AWS_REGION",           "value": "eu-north-1" },
+        { "name": "NEXT_PUBLIC_COGNITO_USER_POOL_ID", "value": "eu-north-1_gAQieJNc7" },
+        { "name": "NEXT_PUBLIC_COGNITO_CLIENT_ID",    "value": "7dlpsdclpa4kujl65ghmo78788" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/career-net/frontend",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "essential": true
+    }
+  ]
+}

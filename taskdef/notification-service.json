@@ -1,0 +1,44 @@
+{
+  "family": "career-net-notification-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "notification-service",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/career-net-notification-service:latest",
+      "portMappings": [
+        {
+          "containerPort": 8083,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "DB_PORT",                    "value": "5432" },
+        { "name": "DB_NAME",                    "value": "postgres" },
+        { "name": "DB_USERNAME",                "value": "postgres" },
+        { "name": "MONGO_DATABASE",             "value": "careerdb" },
+        { "name": "AWS_REGION",                 "value": "eu-north-1" },
+        { "name": "RABBITMQ_QUEUE_JOB_CREATED", "value": "job.created" }
+      ],
+      "secrets": [
+        { "name": "DB_HOST",              "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_HOST" },
+        { "name": "DB_PASSWORD",          "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_PASSWORD" },
+        { "name": "MONGO_URI",            "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/MONGO_URI" },
+        { "name": "RABBITMQ_URL",         "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_URL" },
+        { "name": "COGNITO_USER_POOL_ID", "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/COGNITO_USER_POOL_ID" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/career-net/notification-service",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "essential": true
+    }
+  ]
+}

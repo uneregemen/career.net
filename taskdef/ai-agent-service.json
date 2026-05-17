@@ -1,0 +1,40 @@
+{
+  "family": "career-net-ai-agent-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "ai-agent-service",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/career-net-ai-agent-service:latest",
+      "portMappings": [
+        {
+          "containerPort": 8085,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "MONGO_DATABASE",    "value": "careerdb" },
+        { "name": "AWS_REGION",        "value": "eu-north-1" },
+        { "name": "SEARCH_SERVICE_URL","value": "http://search-service:8082" },
+        { "name": "JOB_SERVICE_URL",   "value": "http://job-service:8081" }
+      ],
+      "secrets": [
+        { "name": "MONGO_URI",            "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/MONGO_URI" },
+        { "name": "GEMINI_API_KEY",       "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/GEMINI_API_KEY" },
+        { "name": "COGNITO_USER_POOL_ID", "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/COGNITO_USER_POOL_ID" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/career-net/ai-agent-service",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "essential": true
+    }
+  ]
+}

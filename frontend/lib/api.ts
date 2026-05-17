@@ -1,20 +1,20 @@
 import axios from "axios";
+import { fetchAuthSession } from "aws-amplify/auth";
+import "@/lib/amplify"; // Amplify yapılandırmasını başlat
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// baseURL boş — next.config.ts'deki rewrite kuralı /api/v1/* isteklerini Gateway'e yönlendirir
+export const api = axios.create({ baseURL: "" });
 
-// Tüm servislere giden isteklerin geçtiği tek axios client
-export const api = axios.create({ baseURL: API_URL });
-
-// Her istekte Cognito token'ını otomatik ekle
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    // Amplify token'ı localStorage'da CognitoIdentityServiceProvider.xxx.xxx.accessToken key'inde tutar
-    const keys = Object.keys(localStorage).filter((k) =>
-      k.includes("accessToken")
-    );
-    if (keys.length > 0) {
-      config.headers.Authorization = `Bearer ${localStorage.getItem(keys[0])}`;
+// Her istekte Amplify v6 üzerinden Cognito token'ı al ve header'a ekle
+api.interceptors.request.use(async (config) => {
+  try {
+    const session = await fetchAuthSession();
+    const token = session.tokens?.idToken?.toString();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+  } catch (_) {
+    // Kullanıcı giriş yapmamış — token eklenmeden devam et
   }
   return config;
 });

@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import "@/lib/amplify"; // Amplify'ı uygulama başlarken yapılandır
 
 // Her render'da yeni QueryClient oluşturmamak için useState içinde tutuyoruz
 export default function Providers({ children }: { children: React.ReactNode }) {

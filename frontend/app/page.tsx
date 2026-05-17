@@ -23,10 +23,16 @@ export default function HomePage() {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`
+          `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`
         );
         const data = await res.json();
-        const found = data.address?.city || data.address?.town || data.address?.province || "";
+        const addr = data.address || {};
+        // Türkiye için il (province/state) kullan, ilçe (town/suburb) değil
+        const found = addr.city ||
+                      addr.province ||
+                      addr.state?.replace(/ (İli|Province|Region)$/i, "") ||
+                      addr.county?.replace(/ İlçesi$/i, "") ||
+                      "";
         setDetectedCity(found);
         if (!city) setCity(found);
       } catch (_) {}
@@ -128,30 +134,38 @@ export default function HomePage() {
         {/* Son Aramalarım */}
         <aside className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4 text-gray-700 font-semibold">
-              <Clock size={16} />
+            <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold text-sm">
+              <Clock size={15} />
               Son Aramalarım
             </div>
             {recentSearches.length === 0 ? (
-              <p className="text-sm text-gray-400">Henüz arama yapılmadı</p>
+              <p className="text-xs text-gray-400">Henüz arama yapılmadı</p>
             ) : (
-              <ul className="space-y-2">
-                {recentSearches.map((s) => (
-                  <li key={s.id}>
+              <div className="space-y-1">
+                {recentSearches.map((s) => {
+                  const label = [s.position, s.city].filter(Boolean).join(" · ");
+                  if (!label) return null;
+                  return (
                     <button
+                      key={s.id}
                       onClick={() => {
                         const p = new URLSearchParams();
                         if (s.position) p.set("position", s.position);
                         if (s.city) p.set("city", s.city);
                         router.push(`/search?${p.toString()}`);
                       }}
-                      className="text-sm text-left text-blue-600 hover:underline w-full"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group"
                     >
-                      {[s.city, s.position].filter(Boolean).join(" – ")}
+                      <p className="text-xs font-medium text-gray-700 group-hover:text-blue-600 truncate">
+                        {label}
+                      </p>
+                      {s.filters?.workingPreference && (
+                        <p className="text-xs text-gray-400">{s.filters.workingPreference}</p>
+                      )}
                     </button>
-                  </li>
-                ))}
-              </ul>
+                  );
+                })}
+              </div>
             )}
           </div>
         </aside>

@@ -1,18 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { CheckCircle } from "lucide-react";
 
 export default function AdminPage() {
+  const qc = useQueryClient();
   const [companyName, setCompanyName] = useState("");
   const [companyMsg, setCompanyMsg] = useState("");
   const [job, setJob] = useState({ title: "", description: "", city: "", country: "Turkey", town: "", workingPreference: "FULLTIME", requirements: "", salaryRange: "" });
   const [jobMsg, setJobMsg] = useState("");
 
+  // Admin: onay bekleyen şirketleri listele
+  const { data: companies = [] } = useQuery<any[]>({
+    queryKey: ["admin-companies"],
+    queryFn: () => api.get("/api/v1/admin/companies").then((r) => r.data),
+  });
+
+  const verify = useMutation({
+    mutationFn: (id: string) => api.put(`/api/v1/admin/companies/${id}/verify`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-companies"] }),
+  });
+
   const registerCompany = async () => {
     try {
       await api.post("/api/v1/admin/companies/register", { name: companyName });
       setCompanyMsg("✓ Şirket kaydı oluşturuldu, onay bekleniyor.");
+      setCompanyName("");
     } catch (e: any) {
       setCompanyMsg("Hata: " + (e.response?.data?.error || e.message));
     }
@@ -30,6 +45,27 @@ export default function AdminPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-10">
       <h1 className="text-2xl font-bold text-gray-800">Şirket Paneli</h1>
+
+      {/* Admin: Şirket Onay Listesi */}
+      {companies.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-6 space-y-3">
+          <h2 className="font-semibold text-gray-700">Şirket Onayları</h2>
+          {companies.map((c: any) => (
+            <div key={c.id} className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3">
+              <div>
+                <p className="font-medium text-gray-800 text-sm">{c.name}</p>
+                <p className="text-xs text-gray-400">{c.verified ? "✓ Onaylı" : "Onay bekliyor"}</p>
+              </div>
+              {!c.verified && (
+                <button onClick={() => verify.mutate(c.id)}
+                  className="flex items-center gap-1 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
+                  <CheckCircle size={14} /> Onayla
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Şirket Kaydı */}
       <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">

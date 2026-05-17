@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Slf4j  // log.info() gibi loglama metodlarını açar
@@ -32,16 +33,26 @@ public class NotificationService {
     // RabbitMQ consumer tarafından çağrılır: yeni ilan → alarm eşleştir → bildirim oluştur
     @Transactional
     public void matchAndNotify(JobCreatedEvent event) {
+        log.info("matchAndNotify başladı — ilan: '{}', şehir: '{}'", event.getTitle(), event.getCity());
+
         List<JobAlert> activeAlerts = alertRepository.findByActiveTrue();
+        log.info("Aktif alarm sayısı: {}", activeAlerts.size());
 
         for (JobAlert alert : activeAlerts) {
-            if (matches(alert, event)) {
-                createNotificationIfNotExists(
-                        alert.getUserId(),
-                        event.getJobId(),
-                        "Yeni İş İlanı: " + event.getTitle(),
-                        event.getTitle() + " – " + event.getCity()
-                );
+            boolean matched = matches(alert, event);
+            log.info("Alert userId={} keywords='{}' city='{}' → eşleşti: {}",
+                    alert.getUserId(), alert.getPositionKeywords(), alert.getCity(), matched);
+            if (matched) {
+                try {
+                    createNotificationIfNotExists(
+                            alert.getUserId(),
+                            event.getJobId(),
+                            "Yeni İş İlanı: " + event.getTitle(),
+                            event.getTitle() + " – " + event.getCity()
+                    );
+                } catch (Exception e) {
+                    log.error("Bildirim kaydedilemedi: {}", e.getMessage(), e);
+                }
             }
         }
     }
@@ -49,12 +60,16 @@ public class NotificationService {
     // Alarm kriterleri ile iş ilanının eşleşip eşleşmediğini kontrol eder
     private boolean matches(JobAlert alert, JobCreatedEvent event) {
         if (alert.getPositionKeywords() != null && !alert.getPositionKeywords().isBlank()) {
-            boolean titleMatch = event.getTitle().toLowerCase()
-                    .contains(alert.getPositionKeywords().toLowerCase());
+            String title    = event.getTitle().toLowerCase(Locale.ROOT);
+            String keywords = alert.getPositionKeywords().toLowerCase(Locale.ROOT);
+            // İki yönlü eşleşme: "developer" alarmı "Mobile Developer" ilanını,
+            // "mobile developer" alarmı "developer" ilanını da yakalar
+            boolean titleMatch = title.contains(keywords) || keywords.contains(title);
             if (!titleMatch) return false;
         }
         if (alert.getCity() != null && !alert.getCity().isBlank()) {
-            if (!alert.getCity().equalsIgnoreCase(event.getCity())) return false;
+            if (!alert.getCity().toLowerCase(Locale.ROOT)
+                    .equals(event.getCity().toLowerCase(Locale.ROOT))) return false;
         }
         if (alert.getWorkingPreference() != null && !alert.getWorkingPreference().isBlank()) {
             if (!alert.getWorkingPreference().equalsIgnoreCase(event.getWorkingPreference())) return false;

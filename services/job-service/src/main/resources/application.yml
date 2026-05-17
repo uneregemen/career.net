@@ -5,10 +5,17 @@ spring:
   application:
     name: job-service
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false  # LocalDateTime'ı ISO string olarak serialize et
+
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:postgres}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -25,8 +32,13 @@ spring:
       url: ${REDIS_URL}
 
   rabbitmq:
-    # amqps:// prefix'i Spring Boot'a SSL kullan demektir (CloudAMQP için gerekli)
-    addresses: ${RABBITMQ_URL}
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5671}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST}
+    ssl:
+      enabled: true
 
   cache:
     type: redis

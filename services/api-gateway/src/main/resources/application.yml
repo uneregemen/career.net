@@ -13,17 +13,6 @@ spring:
 
   cloud:
     gateway:
-      # Global CORS — frontend'in farklı port'tan istek atmasına izin verir
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-              - "https://career.net"
-            allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-            allowedHeaders: ["*"]
-            allowCredentials: true
-
       routes:
         # ── Job Service ───────────────────────────────────────────────────────
         - id: job-service

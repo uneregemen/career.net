@@ -16,13 +16,8 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Anonim kullanıcılar da AI chat kullanabilir
-                .requestMatchers("/api/v1/ai/chat").permitAll()
-                .requestMatchers("/api/v1/ai/chat/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
+            // AI chat servisi tamamen public — token gerekmez
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 }

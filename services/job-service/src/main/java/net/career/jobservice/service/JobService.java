@@ -1,5 +1,6 @@
 package net.career.jobservice.service;
 
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import net.career.jobservice.dto.JobRequest;
 import net.career.jobservice.dto.JobResponse;
@@ -16,10 +17,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -57,16 +61,36 @@ public class JobService {
                                     String town, Job.WorkingPreference workingPreference,
                                     int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("postedAt").descending());
-        return jobRepository.search(position, city, country, town, workingPreference, pageable)
-                .map(JobResponse::from);
+
+        // Specification: sadece null olmayan parametreler WHERE koşuluna eklenir
+        // Böylece PostgreSQL'e hiçbir zaman null değerli LOWER() gönderilmez
+        Specification<Job> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isTrue(root.get("active")));
+
+            if (position != null && !position.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("title")), "%" + position.toLowerCase(Locale.ROOT) + "%"));
+            if (city != null && !city.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("city")), "%" + city.toLowerCase(Locale.ROOT) + "%"));
+            if (country != null && !country.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("country")), "%" + country.toLowerCase(Locale.ROOT) + "%"));
+            if (town != null && !town.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("town")), "%" + town.toLowerCase(Locale.ROOT) + "%"));
+            if (workingPreference != null)
+                predicates.add(cb.equal(root.get("workingPreference"), workingPreference));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return jobRepository.findAll(spec, pageable).map(JobResponse::from);
     }
 
     public List<String> autocompletePosition(String q) {
-        return jobRepository.autocompletePosition(q, PageRequest.of(0, 10));
+        return jobRepository.autocompletePosition(q.toLowerCase(Locale.ROOT), PageRequest.of(0, 10));
     }
 
     public List<String> autocompleteCity(String q) {
-        return jobRepository.autocompleteCity(q, PageRequest.of(0, 10));
+        return jobRepository.autocompleteCity(q.toLowerCase(Locale.ROOT), PageRequest.of(0, 10));
     }
 
     @Transactional
