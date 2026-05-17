@@ -15,6 +15,7 @@ These are cloud-hosted. **Never add localhost fallback defaults for them in `app
 | PostgreSQL | **Supabase** | DB_HOST, DB_PASSWORD must come from env — no `:localhost` default |
 | MongoDB | **MongoDB Atlas** | MONGO_URI must come from env — no local URI default |
 | Redis | **Upstash or AWS ElastiCache** | REDIS_HOST, REDIS_PASSWORD from env |
+| RabbitMQ | **CloudAMQP** | Single `RABBITMQ_URL=amqps://...` — uses SSL, configured via `spring.rabbitmq.addresses` |
 | Auth | **AWS Cognito** | COGNITO_USER_POOL_ID from env |
 | AI | **Google Gemini** | GEMINI_API_KEY from env |
 

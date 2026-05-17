@@ -26,10 +26,8 @@ spring:
       password: ${REDIS_PASSWORD:careerpass}
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:careeruser}
-    password: ${RABBITMQ_PASSWORD:careerpass}
+    # amqps:// prefix'i Spring Boot'a SSL kullan demektir (CloudAMQP için gerekli)
+    addresses: ${RABBITMQ_URL}
 
   cache:
     type: redis

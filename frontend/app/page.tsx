@@ -1,0 +1,172 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { Search, MapPin, Clock } from "lucide-react";
+import { jobsApi, searchApi } from "@/lib/api";
+import { Job, JobSearch } from "@/types";
+import JobCard from "@/components/JobCard";
+
+export default function HomePage() {
+  const router = useRouter();
+  const [position, setPosition] = useState("");
+  const [city, setCity] = useState("");
+  const [positionSuggestions, setPositionSuggestions] = useState<string[]>([]);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [detectedCity, setDetectedCity] = useState("");
+  const sessionId = useRef(crypto.randomUUID()).current;
+
+  // Tarayıcının konumunu al → şehre çevir (OpenStreetMap Nominatim — ücretsiz, API key gerekmez)
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`
+        );
+        const data = await res.json();
+        const found = data.address?.city || data.address?.town || data.address?.province || "";
+        setDetectedCity(found);
+        if (!city) setCity(found);
+      } catch (_) {}
+    });
+  }, []);
+
+  // Tespit edilen şehirdeki ilanları çek
+  const { data: nearbyJobs = [] } = useQuery<Job[]>({
+    queryKey: ["nearby", detectedCity],
+    queryFn: () => jobsApi.nearby(detectedCity).then((r) => r.data),
+    enabled: !!detectedCity,
+  });
+
+  // Son aramaları çek
+  const { data: recentSearches = [] } = useQuery<JobSearch[]>({
+    queryKey: ["recent-searches"],
+    queryFn: () => searchApi.recent(sessionId).then((r) => r.data),
+  });
+
+  // Pozisyon autocomplete — kullanıcı 2 karakter yazınca API'yi çağır
+  const handlePositionChange = async (val: string) => {
+    setPosition(val);
+    if (val.length < 2) { setPositionSuggestions([]); return; }
+    const res = await jobsApi.autocompletePosition(val);
+    setPositionSuggestions(res.data);
+  };
+
+  const handleCityChange = async (val: string) => {
+    setCity(val);
+    if (val.length < 2) { setCitySuggestions([]); return; }
+    const res = await jobsApi.autocompleteCity(val);
+    setCitySuggestions(res.data);
+  };
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (position) params.set("position", position);
+    if (city) params.set("city", city);
+    router.push(`/search?${params.toString()}`);
+  };
+
+  return (
+    <div className="space-y-10">
+
+      {/* Arama Kutuları */}
+      <section className="bg-white rounded-2xl shadow-sm p-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">İş Bul</h1>
+        <div className="flex gap-3 flex-wrap">
+
+          {/* Pozisyon */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={18} className="absolute left-3 top-3.5 text-gray-400" />
+            <input
+              value={position}
+              onChange={(e) => handlePositionChange(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Pozisyon (ör: Java Developer)"
+              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {positionSuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow">
+                {positionSuggestions.map((s) => (
+                  <li key={s} onClick={() => { setPosition(s); setPositionSuggestions([]); }}
+                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Şehir */}
+          <div className="relative flex-1 min-w-[200px]">
+            <MapPin size={18} className="absolute left-3 top-3.5 text-gray-400" />
+            <input
+              value={city}
+              onChange={(e) => handleCityChange(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Şehir"
+              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {citySuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow">
+                {citySuggestions.map((s) => (
+                  <li key={s} onClick={() => { setCity(s); setCitySuggestions([]); }}
+                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button onClick={handleSearch}
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            Ara
+          </button>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        {/* Son Aramalarım */}
+        <aside className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4 text-gray-700 font-semibold">
+              <Clock size={16} />
+              Son Aramalarım
+            </div>
+            {recentSearches.length === 0 ? (
+              <p className="text-sm text-gray-400">Henüz arama yapılmadı</p>
+            ) : (
+              <ul className="space-y-2">
+                {recentSearches.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      onClick={() => {
+                        const p = new URLSearchParams();
+                        if (s.position) p.set("position", s.position);
+                        if (s.city) p.set("city", s.city);
+                        router.push(`/search?${p.toString()}`);
+                      }}
+                      className="text-sm text-left text-blue-600 hover:underline w-full"
+                    >
+                      {[s.city, s.position].filter(Boolean).join(" – ")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </aside>
+
+        {/* Yakındaki İlanlar */}
+        <section className="lg:col-span-3 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-700">
+            {detectedCity ? `${detectedCity} Yakınındaki İlanlar` : "Öne Çıkan İlanlar"}
+          </h2>
+          {nearbyJobs.length === 0
+            ? <p className="text-sm text-gray-400">İlan bulunamadı</p>
+            : nearbyJobs.map((job) => <JobCard key={job.id} job={job} />)
+          }
+        </section>
+      </div>
+    </div>
+  );
+}

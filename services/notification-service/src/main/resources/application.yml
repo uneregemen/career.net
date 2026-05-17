@@ -25,10 +25,7 @@ spring:
       database: ${MONGO_DATABASE:careerdb}
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:careeruser}
-    password: ${RABBITMQ_PASSWORD:careerpass}
+    addresses: ${RABBITMQ_URL}
 
   security:
     oauth2:
