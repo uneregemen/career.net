@@ -45,6 +45,17 @@ export const notificationsApi = {
   deleteAlert: (id: string) => api.delete(`/api/v1/alerts/${id}`),
 };
 
+// ── Applications ─────────────────────────────────────────────────────────────
+export const applicationsApi = {
+  myApplications: () => api.get("/api/v1/jobs/my-applications"),
+};
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+export const profileApi = {
+  get: () => api.get("/api/v1/profile"),
+  update: (data: Record<string, unknown>) => api.put("/api/v1/profile", data),
+};
+
 // ── AI Agent Service ──────────────────────────────────────────────────────────
 export const aiApi = {
   chat: (sessionId: string, message: string) =>

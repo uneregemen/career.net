@@ -50,11 +50,16 @@ public class JobService {
         return jobRepository.findByActiveTrue(pageable).map(JobResponse::from);
     }
 
-    @Cacheable(value = "cityJobs", key = "#city")
+    @Cacheable(value = "cityJobs", key = "T(net.career.jobservice.service.JobService).normalizeCity(#city)")
     public List<JobResponse> getNearby(String city) {
         return jobRepository
-                .findTop5ByActiveTrueAndCityIgnoreCaseOrderByPostedAtDesc(city)
+                .findNearbyByNormalizedCity(normalizeCity(city))
                 .stream().map(JobResponse::from).toList();
+    }
+
+    // İ→I, ı→i normalize ederek Türkçe büyük/küçük harf sorununu çözer
+    public static String normalizeCity(String city) {
+        return city.replace("İ", "I").replace("ı", "i").toLowerCase(Locale.ENGLISH);
     }
 
     public Page<JobResponse> search(String position, String city, String country,
@@ -70,8 +75,16 @@ public class JobService {
 
             if (position != null && !position.isBlank())
                 predicates.add(cb.like(cb.lower(root.get("title")), "%" + position.toLowerCase(Locale.ROOT) + "%"));
-            if (city != null && !city.isBlank())
-                predicates.add(cb.like(cb.lower(root.get("city")), "%" + city.toLowerCase(Locale.ROOT) + "%"));
+            if (city != null && !city.isBlank()) {
+                // DB tarafında İ→I, ı→i normalize et; input tarafında da aynı dönüşüm yapıldı
+                jakarta.persistence.criteria.Expression<String> normalizedDbCity = cb.lower(
+                    cb.function("REPLACE", String.class,
+                        cb.function("REPLACE", String.class, root.get("city"),
+                            cb.literal("İ"), cb.literal("I")),
+                        cb.literal("ı"), cb.literal("i"))
+                );
+                predicates.add(cb.like(normalizedDbCity, "%" + normalizeCity(city) + "%"));
+            }
             if (country != null && !country.isBlank())
                 predicates.add(cb.like(cb.lower(root.get("country")), "%" + country.toLowerCase(Locale.ROOT) + "%"));
             if (town != null && !town.isBlank())
@@ -90,7 +103,7 @@ public class JobService {
     }
 
     public List<String> autocompleteCity(String q) {
-        return jobRepository.autocompleteCity(q.toLowerCase(Locale.ROOT), PageRequest.of(0, 10));
+        return jobRepository.autocompleteCity(normalizeCity(q));
     }
 
     @Transactional

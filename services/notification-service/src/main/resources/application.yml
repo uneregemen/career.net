@@ -53,3 +53,6 @@ rabbitmq:
 scheduler:
   related-jobs-lookback-days: 7
 
+services:
+  job-service-url: ${JOB_SERVICE_URL:http://localhost:8081}
+

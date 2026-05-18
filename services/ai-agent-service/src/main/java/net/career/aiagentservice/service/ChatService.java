@@ -1,6 +1,7 @@
 package net.career.aiagentservice.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.career.aiagentservice.dto.ChatRequest;
 import net.career.aiagentservice.dto.ChatResponse;
 import net.career.aiagentservice.model.ChatSession;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatService {
@@ -19,16 +21,25 @@ public class ChatService {
     private final GeminiService geminiService;
 
     public ChatResponse chat(ChatRequest request, String userId) {
-        // Mevcut oturumu bul ya da yeni oluştur
-        ChatSession session = sessionRepository.findBySessionId(request.getSessionId())
-                .orElse(ChatSession.builder()
-                        .sessionId(request.getSessionId())
-                        .userId(userId)
-                        .createdAt(LocalDateTime.now())
-                        .build());
+        // Mevcut oturumu bul ya da yeni oluştur (MongoDB erişilemezse boş oturum kullan)
+        ChatSession session;
+        try {
+            session = sessionRepository.findBySessionId(request.getSessionId())
+                    .orElse(ChatSession.builder()
+                            .sessionId(request.getSessionId())
+                            .userId(userId)
+                            .createdAt(LocalDateTime.now())
+                            .build());
+        } catch (Exception e) {
+            log.warn("MongoDB oturum yüklenemedi, bellekte devam ediliyor: {}", e.getMessage());
+            session = ChatSession.builder()
+                    .sessionId(request.getSessionId())
+                    .userId(userId)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+        }
 
         // Geçmiş mesajları Gemini formatına çevir
-        // Gemini formatı: [{"role": "user", "parts": [{"text": "..."}]}, ...]
         List<Map<String, Object>> history = session.getMessages().stream()
                 .map(msg -> Map.<String, Object>of(
                         "role", msg.getRole().equals("assistant") ? "model" : "user",
@@ -42,22 +53,23 @@ public class ChatService {
         String aiText = (String) result.get("text");
         List<Map<String, Object>> rawCards = (List<Map<String, Object>>) result.get("jobCards");
 
-        // Kullanıcı mesajını MongoDB'ye kaydet
-        session.getMessages().add(ChatSession.ChatMessage.builder()
-                .role("user")
-                .content(request.getMessage())
-                .timestamp(LocalDateTime.now())
-                .build());
-
-        // AI cevabını MongoDB'ye kaydet
-        session.getMessages().add(ChatSession.ChatMessage.builder()
-                .role("assistant")
-                .content(aiText)
-                .timestamp(LocalDateTime.now())
-                .build());
-
-        session.setUpdatedAt(LocalDateTime.now());
-        sessionRepository.save(session);
+        // Mesajları MongoDB'ye kaydet (erişilemezse sessizce geç)
+        try {
+            session.getMessages().add(ChatSession.ChatMessage.builder()
+                    .role("user")
+                    .content(request.getMessage())
+                    .timestamp(LocalDateTime.now())
+                    .build());
+            session.getMessages().add(ChatSession.ChatMessage.builder()
+                    .role("assistant")
+                    .content(aiText)
+                    .timestamp(LocalDateTime.now())
+                    .build());
+            session.setUpdatedAt(LocalDateTime.now());
+            sessionRepository.save(session);
+        } catch (Exception e) {
+            log.warn("MongoDB oturum kaydedilemedi: {}", e.getMessage());
+        }
 
         // İş kartlarını ChatResponse formatına çevir
         List<ChatResponse.JobCard> jobCards = rawCards.stream()

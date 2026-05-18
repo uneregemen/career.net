@@ -53,3 +53,9 @@ spring:
           uri: ${AI_AGENT_SERVICE_URL:http://localhost:8085}
           predicates:
             - Path=/api/v1/ai/**
+
+        # Profile (notification-service)
+        - id: profile
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/profile/**

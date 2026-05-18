@@ -68,3 +68,25 @@ export interface ChatResponse {
 }
 
 export type WorkingPreference = "FULLTIME" | "PARTTIME" | "REMOTE" | "HYBRID";
+
+export interface Application {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  appliedAt: string;
+  status: string;
+}
+
+export interface UserProfile {
+  id?: string;
+  cognitoUserId?: string;
+  name?: string;
+  surname?: string;
+  email?: string;
+  phone?: string;
+  gender?: string;
+  age?: number;
+  profession?: string;
+  city?: string;
+  country?: string;
+}

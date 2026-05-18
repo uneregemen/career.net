@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.GET, "/api/v1/search/results").permitAll()
                 .pathMatchers("/api/v1/ai/**").permitAll()
                 .pathMatchers("/api/v1/scheduler/**").permitAll()
+                .pathMatchers("/api/v1/profile/**").authenticated()
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));

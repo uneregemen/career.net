@@ -4,20 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**career.net** is a job board platform built as independently deployable microservices. It is a homework/demo project — not production-grade. All backend services are Spring Boot 3.x (Java 17) + Maven. The frontend is Next.js 14 + TypeScript. Deployment target is AWS ECS Fargate.
+**career.net** is a job board platform built as independently deployable microservices. It is a homework/demo project — not production-grade. All backend services are Spring Boot 3.x (Java 17) + Maven. The frontend is **Next.js 16.2.6 + React 19 + TypeScript** — this version has breaking changes from Next.js 14; check `node_modules/next/dist/docs/` before writing any frontend code. Deployment target is AWS ECS Fargate.
 
 ## External Services (Cloud — NOT local)
 
 These are cloud-hosted. **Never add localhost fallback defaults for them in `application.yml`.**
 
-| Service | Provider | Notes |
+| Service | Provider | Env vars |
 |---|---|---|
-| PostgreSQL | **Supabase** | DB_HOST, DB_PASSWORD must come from env — no `:localhost` default |
-| MongoDB | **MongoDB Atlas** | MONGO_URI must come from env — no local URI default |
-| Redis | **Upstash** | Single `REDIS_URL=rediss://...` — SSL zorunlu, `spring.data.redis.url` ile kullanılır |
-| RabbitMQ | **CloudAMQP** | Single `RABBITMQ_URL=amqps://...` — uses SSL, configured via `spring.rabbitmq.addresses` |
-| Auth | **AWS Cognito** | COGNITO_USER_POOL_ID from env |
-| AI | **Google Gemini** | GEMINI_API_KEY from env |
+| PostgreSQL | **Supabase** | `DB_HOST`, `DB_PASSWORD` — no `:localhost` default |
+| MongoDB | **MongoDB Atlas** | `MONGO_URI` — no local URI default |
+| Redis | **Upstash** | `REDIS_URL=rediss://...` — SSL required, used via `spring.data.redis.url` |
+| RabbitMQ | **CloudAMQP** | `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST` — SSL enabled, port default 5671 |
+| Auth | **AWS Cognito** | `COGNITO_USER_POOL_ID`, `AWS_REGION` |
+| AI | **Google Gemini** | `GEMINI_API_KEY` |
 
 **Correct pattern in `application.yml`:**
 ```yaml
@@ -43,16 +43,19 @@ datasource:
 docker-compose up -d
 ```
 
-This starts **only** MongoDB (27017) and RabbitMQ (5672, management UI at 15672). PostgreSQL and Redis are cloud-hosted — set the env vars before running any service.
+This starts MongoDB (27017), Redis (6379), and RabbitMQ (5672, management UI at 15672). PostgreSQL is cloud-hosted (Supabase) — set `DB_HOST` and `DB_PASSWORD` before running any service.
 
 ### Required env vars for local dev
 
 Copy `.env.example` to `.env` and fill in:
-- `DB_HOST` — Supabase host (e.g. `db.xxxx.supabase.co`)
-- `DB_PASSWORD` — Supabase DB password
+- `DB_HOST`, `DB_PASSWORD` — Supabase connection
 - `MONGO_URI` — MongoDB Atlas connection string
+- `REDIS_URL` — Upstash URL (`rediss://...`)
+- `RABBITMQ_HOST`, `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST` — CloudAMQP instance
 - `GEMINI_API_KEY` — Google AI Studio key (ai-agent-service only)
 - `COGNITO_USER_POOL_ID` — AWS Cognito (can skip for local if security is disabled)
+- Inter-service URLs: `JOB_SERVICE_URL`, `SEARCH_SERVICE_URL`, `NOTIFICATION_SERVICE_URL`, `ADMIN_SERVICE_URL`, `AI_AGENT_SERVICE_URL`
+- Frontend: `NEXT_PUBLIC_API_URL` (points to API Gateway, default `http://localhost:8080`), `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`
 
 ### Run a Spring Boot service
 
@@ -79,9 +82,11 @@ mvn test -Dtest=JobServiceTest
 
 ```bash
 cd frontend
-npm run dev      # dev server
+npm run dev      # dev server on :3000
 npm run build    # production build
 ```
+
+Frontend proxies all `/api/v1/*` requests to `NEXT_PUBLIC_API_URL` via a rewrite in `next.config.ts` — no CORS needed.
 
 ## Architecture
 
@@ -104,11 +109,13 @@ All external traffic goes through the API Gateway. Services call each other via 
 - **PostgreSQL (Supabase)** — jobs, companies, users, job_alerts, notifications, applications. Schema in [docs/init.sql](docs/init.sql).
 - **MongoDB (Atlas)** — `job_searches` collection (search history) + `ai_chat_sessions` (Gemini chat history).
 - **Redis** — job posting cache. Keys: `job:{uuid}` (1h TTL), `jobs:city:{city}` (15m), `jobs:search:{hash}` (10m). Managed by `@Cacheable` in job-service.
-- **RabbitMQ (local/Amazon MQ)** — queue `job.created`: published by job-service on every new job, consumed by notification-service.
+- **RabbitMQ (CloudAMQP/Amazon MQ)** — queue `job.created`: published by job-service on every new job, consumed by notification-service.
 
 ### Authentication Flow
 
 AWS Cognito is the only auth provider. The API Gateway validates the JWT from the `Authorization: Bearer` header against Cognito's JWKS endpoint. Each service is also an OAuth2 resource server (`spring.security.oauth2.resourceserver.jwt.jwk-set-uri`). The Cognito user's `sub` claim is used as `userId` everywhere. Company/admin status is stored in the `companies` table, not in Cognito groups.
+
+The frontend uses AWS Amplify (`@aws-amplify/auth`) to manage Cognito tokens in the browser; `lib/api.ts` attaches the `idToken` to every request via an axios interceptor.
 
 ### Notification Flow
 
@@ -119,7 +126,7 @@ AWS Cognito is the only auth provider. The API Gateway validates the JWT from th
 
 ### AI Agent Flow
 
-The ai-agent-service receives a chat message, calls Gemini `gemini-1.5-flash` with a system prompt that declares two tools: `search_jobs(position, city)` and `get_job_details(id)`. When Gemini invokes a tool, the service calls the corresponding internal API, injects the result as a `functionResponse`, and re-calls Gemini for the final answer. Sessions persist in MongoDB Atlas.
+The ai-agent-service receives a chat message, calls Gemini `gemini-1.5-flash` with a system prompt that declares two tools: `search_jobs(position, city)` and `get_job_details(id)`. When Gemini invokes a tool, the service calls the corresponding internal API, injects the result as a `functionResponse`, and re-calls Gemini for the final answer. Sessions persist in MongoDB Atlas. No streaming — full response in one HTTP call.
 
 ## Key Conventions
 
@@ -130,3 +137,4 @@ The ai-agent-service receives a chat message, calls Gemini `gemini-1.5-flash` wi
 - **Security**: GET endpoints on jobs/search are public. All write operations require a valid Cognito JWT. The `cognitoUserId` is extracted from `Authentication.getName()` in controllers.
 - **Inter-service calls**: Use Spring `WebClient` for calls from ai-agent-service; use `RestTemplate` elsewhere.
 - **No local DB defaults**: `DB_HOST`, `DB_PASSWORD`, `MONGO_URI` must never have localhost/local fallbacks in `application.yml`. They are always cloud-hosted.
+- **Frontend state**: Global auth/UI state uses Zustand; server data fetching uses TanStack React Query. All API calls go through `lib/api.ts` (axios instance with Amplify interceptor).

@@ -20,6 +20,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/alerts/**").authenticated()
                 .requestMatchers("/api/v1/notifications/**").authenticated()
+                .requestMatchers("/api/v1/profile/**").authenticated()
                 // Scheduler endpoint'leri — production'da EventBridge çağırır, güvenli iç ağda
                 .requestMatchers(HttpMethod.POST, "/api/v1/scheduler/**").permitAll()
                 .anyRequest().authenticated()

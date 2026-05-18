@@ -12,6 +12,14 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT now()
 );
 
+-- Profil alanları (sonradan eklendi)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS surname VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(10);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profession VARCHAR(100);
+
 -- ── Companies ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS companies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

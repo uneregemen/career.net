@@ -19,10 +19,16 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     @Query("SELECT DISTINCT j.title FROM Job j WHERE j.active = true AND LOWER(j.title) LIKE LOWER(CONCAT('%', :q, '%')) ORDER BY j.title")
     List<String> autocompletePosition(@Param("q") String q, Pageable pageable);
 
-    @Query("SELECT DISTINCT j.city FROM Job j WHERE j.active = true AND LOWER(j.city) LIKE LOWER(CONCAT('%', :q, '%')) ORDER BY j.city")
-    List<String> autocompleteCity(@Param("q") String q, Pageable pageable);
+    // Türkçe İ/ı → I/i normalize edildikten sonra eşleştir
+    @Query(value = "SELECT DISTINCT city FROM jobs WHERE is_active = true " +
+                   "AND LOWER(REPLACE(REPLACE(city, 'İ', 'I'), 'ı', 'i')) LIKE '%' || :q || '%' " +
+                   "ORDER BY city LIMIT 10", nativeQuery = true)
+    List<String> autocompleteCity(@Param("q") String q);
 
-    List<Job> findTop5ByActiveTrueAndCityIgnoreCaseOrderByPostedAtDesc(String city);
+    @Query(value = "SELECT * FROM jobs WHERE is_active = true " +
+                   "AND LOWER(REPLACE(REPLACE(city, 'İ', 'I'), 'ı', 'i')) = :city " +
+                   "ORDER BY posted_at DESC LIMIT 5", nativeQuery = true)
+    List<Job> findNearbyByNormalizedCity(@Param("city") String city);
 
     Page<Job> findByActiveTrue(Pageable pageable);
 }

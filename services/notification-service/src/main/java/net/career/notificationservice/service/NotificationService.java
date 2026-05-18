@@ -60,7 +60,7 @@ public class NotificationService {
     // Alarm kriterleri ile iş ilanının eşleşip eşleşmediğini kontrol eder
     private boolean matches(JobAlert alert, JobCreatedEvent event) {
         if (alert.getPositionKeywords() != null && !alert.getPositionKeywords().isBlank()) {
-            String title    = event.getTitle().toLowerCase(Locale.ROOT);
+            String title    = event.getTitle() != null ? event.getTitle().toLowerCase(Locale.ROOT) : "";
             String keywords = alert.getPositionKeywords().toLowerCase(Locale.ROOT);
             // İki yönlü eşleşme: "developer" alarmı "Mobile Developer" ilanını,
             // "mobile developer" alarmı "developer" ilanını da yakalar
@@ -68,10 +68,14 @@ public class NotificationService {
             if (!titleMatch) return false;
         }
         if (alert.getCity() != null && !alert.getCity().isBlank()) {
+            // İlandaki şehir boşsa, şehir filtreli alarm eşleşmez
+            if (event.getCity() == null || event.getCity().isBlank()) return false;
             if (!alert.getCity().toLowerCase(Locale.ROOT)
                     .equals(event.getCity().toLowerCase(Locale.ROOT))) return false;
         }
         if (alert.getWorkingPreference() != null && !alert.getWorkingPreference().isBlank()) {
+            // İlandaki çalışma şekli boşsa, filtreli alarm eşleşmez
+            if (event.getWorkingPreference() == null || event.getWorkingPreference().isBlank()) return false;
             if (!alert.getWorkingPreference().equalsIgnoreCase(event.getWorkingPreference())) return false;
         }
         return true;

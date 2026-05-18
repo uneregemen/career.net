@@ -25,23 +25,32 @@ public class GeminiService {
 
     // Gemini'ye mesaj gönderir, gerekirse tool call çalıştırır, cevabı döner
     public Map<String, Object> chat(List<Map<String, Object>> history, String userMessage) {
-        // Kullanıcının yeni mesajını geçmişe ekle
-        List<Map<String, Object>> contents = new ArrayList<>(history);
-        contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", userMessage))));
+        try {
+            // Kullanıcının yeni mesajını geçmişe ekle
+            List<Map<String, Object>> contents = new ArrayList<>(history);
+            contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", userMessage))));
 
-        // Gemini'ye gönderilecek istek gövdesi
-        Map<String, Object> requestBody = buildRequest(contents);
+            // Gemini'ye gönderilecek istek gövdesi
+            Map<String, Object> requestBody = buildRequest(contents);
 
-        // Gemini'ye gönder
-        Map response = geminiClient.post()
-                .uri(baseUrl + "?key=" + apiKey)
-                .header("Content-Type", "application/json")
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+            // Gemini'ye gönder
+            Map response = geminiClient.post()
+                    .uri(baseUrl + "?key=" + apiKey)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .onStatus(status -> !status.is2xxSuccessful(), clientResponse ->
+                            clientResponse.bodyToMono(String.class)
+                                    .map(body -> new RuntimeException("Gemini API hatası " + clientResponse.statusCode() + ": " + body))
+                    )
+                    .bodyToMono(Map.class)
+                    .block();
 
-        return handleResponse(response, contents);
+            return handleResponse(response, contents);
+        } catch (Exception e) {
+            log.error("Gemini chat hatası: {}", e.getMessage());
+            return Map.of("text", "Üzgünüm, şu an yanıt üretemiyorum. Lütfen tekrar deneyin.", "jobCards", List.of());
+        }
     }
 
     // Gemini'nin cevabını işle: text mi döndü, tool call mı?
