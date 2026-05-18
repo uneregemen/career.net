@@ -23,17 +23,13 @@ public class GeminiService {
     @Value("${gemini.base-url}")
     private String baseUrl;
 
-    // Gemini'ye mesaj gönderir, gerekirse tool call çalıştırır, cevabı döner
     public Map<String, Object> chat(List<Map<String, Object>> history, String userMessage) {
         try {
-            // Kullanıcının yeni mesajını geçmişe ekle
             List<Map<String, Object>> contents = new ArrayList<>(history);
             contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", userMessage))));
 
-            // Gemini'ye gönderilecek istek gövdesi
             Map<String, Object> requestBody = buildRequest(contents);
 
-            // Gemini'ye gönder
             Map response = geminiClient.post()
                     .uri(baseUrl + "?key=" + apiKey)
                     .header("Content-Type", "application/json")
@@ -49,11 +45,13 @@ public class GeminiService {
             return handleResponse(response, contents);
         } catch (Exception e) {
             log.error("Gemini chat hatası: {}", e.getMessage());
-            return Map.of("text", "Üzgünüm, şu an yanıt üretemiyorum. Lütfen tekrar deneyin.", "jobCards", List.of());
+            String msg = e.getMessage() != null && e.getMessage().contains("429")
+                    ? "API kotası doldu. Lütfen 1-2 dakika bekleyip tekrar deneyin."
+                    : "Şu an yanıt üretemiyorum. Lütfen tekrar deneyin.";
+            return Map.of("text", msg, "jobCards", List.of());
         }
     }
 
-    // Gemini'nin cevabını işle: text mi döndü, tool call mı?
     private Map<String, Object> handleResponse(Map response, List<Map<String, Object>> contents) {
         try {
             List candidates = (List) response.get("candidates");
@@ -62,18 +60,14 @@ public class GeminiService {
             List parts = (List) content.get("parts");
             Map firstPart = (Map) parts.get(0);
 
-            // Tool call (araç çağırma): Gemini bir fonksiyon çağırmamızı istedi
             if (firstPart.containsKey("functionCall")) {
                 Map functionCall = (Map) firstPart.get("functionCall");
                 String functionName = (String) functionCall.get("name");
                 Map<String, Object> args = (Map<String, Object>) functionCall.get("args");
 
-                log.info("Gemini tool call istedi: {} args={}", functionName, args);
-
-                // Fonksiyonu çalıştır ve sonucu al
+                log.info("Gemini tool call: {} args={}", functionName, args);
                 Object toolResult = executeTool(functionName, args);
 
-                // Tool sonucunu Gemini'ye geri gönder
                 contents.add(Map.of("role", "model", "parts", List.of(Map.of("functionCall", functionCall))));
                 contents.add(Map.of("role", "user", "parts", List.of(Map.of(
                         "functionResponse", Map.of(
@@ -82,7 +76,6 @@ public class GeminiService {
                         )
                 ))));
 
-                // Gemini'ye tekrar gönder — bu sefer kullanıcıya cevap yazacak
                 Map<String, Object> followUpBody = buildRequest(contents);
                 Map followUpResponse = geminiClient.post()
                         .uri(baseUrl + "?key=" + apiKey)
@@ -95,23 +88,20 @@ public class GeminiService {
                 return extractTextAndJobs(followUpResponse, toolResult);
             }
 
-            // Düz metin cevabı
             String text = (String) firstPart.get("text");
-            return Map.of("text", text, "jobCards", List.of());
+            return Map.of("text", text != null ? text : "", "jobCards", List.of());
 
         } catch (Exception e) {
             log.error("Gemini yanıtı işlenirken hata: {}", e.getMessage());
-            return Map.of("text", "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.", "jobCards", List.of());
+            return Map.of("text", "Bir hata oluştu, lütfen tekrar deneyin.", "jobCards", List.of());
         }
     }
 
-    // Tool çağrısını gerçek API'ye yönlendir
     private Object executeTool(String functionName, Map<String, Object> args) {
         return switch (functionName) {
             case "search_jobs" -> {
                 String position = (String) args.getOrDefault("position", "");
                 String city = (String) args.getOrDefault("city", "");
-                // Search Service'e POST /api/v1/search
                 yield searchClient.post()
                         .uri("/api/v1/search")
                         .bodyValue(Map.of("position", position, "city", city, "size", 5))
@@ -121,7 +111,6 @@ public class GeminiService {
             }
             case "get_job_details" -> {
                 String id = (String) args.get("id");
-                // Job Service'e GET /api/v1/jobs/{id}
                 yield jobClient.get()
                         .uri("/api/v1/jobs/" + id)
                         .retrieve()
@@ -132,44 +121,32 @@ public class GeminiService {
         };
     }
 
-    // Gemini cevabından metni ve iş ilanı kartlarını çıkar
     private Map<String, Object> extractTextAndJobs(Map response, Object toolResult) {
-        String text = "";
+        String text = "İşte bulduğum ilanlar:";
         try {
             List candidates = (List) response.get("candidates");
             Map content = (Map) ((Map) candidates.get(0)).get("content");
             List parts = (List) content.get("parts");
             text = (String) ((Map) parts.get(0)).get("text");
-        } catch (Exception e) {
-            text = "İşte bulduğum ilanlar:";
-        }
+            if (text == null) text = "İşte bulduğum ilanlar:";
+        } catch (Exception ignored) {}
 
-        // Tool sonucundan iş kartlarını çıkar
-        List<Map<String, Object>> jobCards = extractJobCards(toolResult);
+        List<Map<String, Object>> jobCards = List.of();
+        try {
+            if (toolResult instanceof Map m && m.get("content") instanceof List list)
+                jobCards = (List<Map<String, Object>>) list;
+        } catch (Exception ignored) {}
+
         return Map.of("text", text, "jobCards", jobCards);
     }
 
-    private List<Map<String, Object>> extractJobCards(Object toolResult) {
-        try {
-            if (toolResult instanceof Map resultMap) {
-                Object content = resultMap.get("content");
-                if (content instanceof List jobList) {
-                    return (List<Map<String, Object>>) jobList;
-                }
-            }
-        } catch (Exception ignored) {}
-        return List.of();
-    }
-
-    // Gemini'ye gönderilecek tam istek yapısı (system prompt + tools + geçmiş)
     private Map<String, Object> buildRequest(List<Map<String, Object>> contents) {
         return Map.of(
                 "system_instruction", Map.of("parts", List.of(Map.of("text",
                         "Sen career.net iş arama asistanısın. " +
-                        "Kullanıcı bir iş ararsa search_jobs aracını kullan. " +
+                        "Kullanıcı iş ararsa search_jobs aracını kullan. " +
                         "İlan detayı isterse get_job_details aracını kullan. " +
-                        "Türkçe veya İngilizce konuşabilirsin. " +
-                        "Kısa ve yardımcı ol."))),
+                        "Türkçe veya İngilizce konuşabilirsin. Kısa ve yardımcı ol."))),
                 "contents", contents,
                 "tools", List.of(Map.of("functionDeclarations", List.of(
                         Map.of(
@@ -189,7 +166,7 @@ public class GeminiService {
                                 "parameters", Map.of(
                                         "type", "object",
                                         "properties", Map.of(
-                                                "id", Map.of("type", "string", "description", "İş ilanı ID'si")
+                                                "id", Map.of("type", "string", "description", "İş ilanı UUID'si")
                                         ),
                                         "required", List.of("id")
                                 )
