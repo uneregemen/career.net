@@ -61,7 +61,7 @@ export default function JobCard({ job }: { job: Job }) {
             <div className="flex items-center gap-3 mt-2.5 text-xs text-gray-400">
               {job.city && (
                 <span className="flex items-center gap-1">
-                  <MapPin size={12} /> {job.city}{job.town ? `, ${job.town}` : ""}
+                  <MapPin size={12} /> {[job.town, job.city, job.country].filter(Boolean).join(", ")}
                 </span>
               )}
             </div>

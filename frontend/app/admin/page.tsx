@@ -9,7 +9,7 @@ export default function AdminPage() {
   const qc = useQueryClient();
   const [companyName, setCompanyName] = useState("");
   const [companyMsg, setCompanyMsg] = useState("");
-  const [job, setJob] = useState({ title: "", description: "", city: "", country: "Turkey", town: "", workingPreference: "FULLTIME", requirements: "", salaryRange: "" });
+  const [job, setJob] = useState({ title: "", description: "", country: "", city: "", town: "", workingPreference: "FULLTIME", requirements: "", salaryRange: "" });
   const [jobMsg, setJobMsg] = useState("");
 
   // Admin: onay bekleyen şirketleri listele
@@ -86,6 +86,7 @@ export default function AdminPage() {
         <h2 className="font-semibold text-gray-700">İlan Yayınla</h2>
         {[
           { label: "Başlık", key: "title", placeholder: "Frontend Developer" },
+          { label: "Ülke", key: "country", placeholder: "Türkiye" },
           { label: "Şehir", key: "city", placeholder: "İstanbul" },
           { label: "İlçe", key: "town", placeholder: "Kadıköy" },
           { label: "Ücret Aralığı", key: "salaryRange", placeholder: "30000-45000 TRY" },

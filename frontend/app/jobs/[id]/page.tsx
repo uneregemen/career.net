@@ -39,7 +39,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         <h1 className="text-2xl font-bold text-gray-900">{job.title}</h1>
         <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
           <span className="flex items-center gap-1"><Building2 size={15} /> {job.companyName}</span>
-          <span className="flex items-center gap-1"><MapPin size={15} /> {job.city}{job.town ? `, ${job.town}` : ""}</span>
+          <span className="flex items-center gap-1">
+            <MapPin size={15} />
+            {[job.town, job.city, job.country].filter(Boolean).join(", ")}
+          </span>
           <span className="flex items-center gap-1"><Briefcase size={15} /> {job.workingPreference}</span>
           {job.salaryRange && <span className="font-medium text-gray-700">{job.salaryRange}</span>}
         </div>
