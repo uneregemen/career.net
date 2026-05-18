@@ -10,7 +10,7 @@ spring:
       write-dates-as-timestamps: false
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:postgres}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:postgres}?sslmode=require
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
     hikari:

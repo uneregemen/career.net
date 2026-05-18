@@ -7,19 +7,20 @@
 | Backend language | Java | 17 | All microservices |
 | Backend framework | Spring Boot | 3.2.5 | REST APIs, dependency injection, JPA, security |
 | Build tool | Maven | 3.x | Dependency management, packaging |
-| Frontend framework | Next.js | 14 | React-based UI with app router |
+| Frontend framework | Next.js | 16.2.6 | React-based UI with app router |
 | Frontend language | TypeScript | 5.x | Type-safe frontend code |
-| Frontend styling | Tailwind CSS + shadcn/ui | — | Utility-first CSS + component library |
+| Frontend styling | Tailwind CSS v4 | — | Utility-first CSS |
+| Frontend state | Zustand + TanStack React Query | — | Global state + server data fetching |
 | Primary database | **Supabase** (PostgreSQL 16) | — | Relational data: jobs, companies, users, alerts, notifications |
 | NoSQL database | **MongoDB Atlas** | 7 | Search history + AI chat sessions |
-| Cache | Redis (Upstash / AWS ElastiCache) | 7 | Distributed job posting cache |
-| Message queue | RabbitMQ (local Docker / Amazon MQ) | 3 | Async event: new job → notification pipeline |
+| Cache | Redis (**Upstash**) | 7 | Distributed job posting cache |
+| Message queue | RabbitMQ (**CloudAMQP**) | 3 | Async event: new job → notification pipeline |
 | Authentication | AWS Cognito | — | User pool, JWT issuance, JWKS validation |
-| AI model | Google Gemini | gemini-1.5-flash | AI agent chat (tool calling via REST API) |
+| AI model | Google Gemini | gemini-2.0-flash | AI agent chat (tool calling via REST API) |
 | Geolocation | OpenStreetMap Nominatim | — | Free reverse geocoding (no API key) |
 | Containerization | Docker | — | One Dockerfile per service |
-| Cloud platform | AWS | — | ECS Fargate, ElastiCache, Amazon MQ, ECR |
-| Scheduling | AWS EventBridge Scheduler | — | Triggers notification scheduled tasks |
+| Cloud platform | **Azure** | — | Azure Container Apps, Azure Container Registry |
+| Scheduling | Spring `@Scheduled` + Azure Timer | — | Notification scheduled tasks |
 
 ---
 
@@ -27,7 +28,7 @@
 
 ```
                         ┌─────────────┐
-                        │   Frontend  │  Next.js  :3000
+                        │   Frontend  │  Next.js 16  :3000
                         │  (Next.js)  │
                         └──────┬──────┘
                                │ HTTP (all requests via gateway)
@@ -49,15 +50,15 @@
            │         │   Atlas     │          │                          │ (Google REST) │
            │         └─────────────┘          │                          └───────────────┘
     ┌──────▼─────────────────────────────────▼──────┐
-    │                  PostgreSQL (AWS RDS)           │
+    │              PostgreSQL (Supabase)              │
     │  jobs · companies · users · job_alerts          │
     │  notifications · applications                   │
     └────────────────────────────────────────────────┘
            │
     ┌──────▼──────┐       ┌─────────────────────────┐
     │    Redis    │       │        RabbitMQ          │
-    │ (ElastiCache│       │  queue: job.created      │
-    │   Cache)    │       │  job-service → pub       │
+    │  (Upstash)  │       │  queue: job.created      │
+    │   Cache     │       │  job-service → pub       │
     └─────────────┘       │  notification-svc → sub  │
                           └─────────────────────────┘
 ```
@@ -69,47 +70,45 @@
 ### API Gateway (`services/api-gateway` — port 8080)
 - Single entry point for all client requests
 - Validates AWS Cognito JWTs using the JWKS endpoint before forwarding
-- Routes `/api/v1/jobs/**` → job-service, `/api/v1/search/**` → search-service, etc.
+- Routes `/api/v1/jobs/**` → job-service, `/api/v1/search/**` → search-service, `/api/v1/profile/**` → notification-service, etc.
 - Does **not** hold business logic
 
 ### Job Service (`services/job-service` — port 8081)
 - Owns the `jobs`, `companies`, and `applications` PostgreSQL tables
-- All job reads go through Redis cache (`@Cacheable`); cache is evicted on writes
+- All job reads go through Redis cache (`@Cacheable`); cache is evicted on writes. Cache errors are swallowed gracefully — service falls back to DB if Redis is unavailable.
 - Publishes a `JobCreatedEvent` to RabbitMQ `job.created` queue on every new job posting
-- Autocomplete endpoints query the DB with `ILIKE` (position titles, city names)
+- Autocomplete and city search normalize Turkish characters (İ→I, ı→i) for case-insensitive matching
 
 ### Search Service (`services/search-service` — port 8082)
 - Accepts search queries (position, city, country, town, workingPreference)
-- Persists every search as a document in MongoDB `job_searches` collection (for recent-searches history and related-job notifications)
-- Calls Job Service to fetch actual job results; applies filters
+- Persists every search as a document in MongoDB `job_searches` collection
+- Calls Job Service to fetch actual job results
 - `GET /api/v1/search/recent` returns the last 10 searches for a user/session
 
 ### Notification Service (`services/notification-service` — port 8083)
-- Manages `job_alerts` and `notifications` PostgreSQL tables
-- **RabbitMQ consumer**: listens on `job.created`; when a new job arrives, matches it against all active `job_alerts` and writes a row to `notifications` for each match
-- **Scheduled task 1** (`process-job-alerts`): same matching logic, runs on a schedule for any jobs missed by the queue
-- **Scheduled task 2** (`process-related-jobs`): queries MongoDB for searches a user made in the last 7 days, finds related new jobs, writes notifications
-- Exposes `GET /api/v1/notifications` (unread list) and `PUT /api/v1/notifications/{id}/read`
-- No email is sent; notifications are displayed in the frontend UI as a bell badge
+- Manages `job_alerts`, `notifications`, and `users` (profile) PostgreSQL tables
+- **RabbitMQ consumer**: listens on `job.created`; matches job against all active `job_alerts`; writes `notifications` rows
+- **Scheduled task 1** (`process-job-alerts`): backup matching on a schedule
+- **Scheduled task 2** (`process-related-jobs`): queries MongoDB search history, finds related new jobs via job-service HTTP call, writes notifications
+- Exposes `GET/PUT /api/v1/notifications`, `POST/GET/DELETE /api/v1/alerts`, `GET/PUT /api/v1/profile`
 
 ### Admin Service (`services/admin-service` — port 8084)
-- Manages company self-registration (`POST /api/v1/admin/companies/register`)
-- Admins approve companies via `PUT /api/v1/admin/companies/{id}/verify`
-- Verified companies and admins can post jobs; admin-service delegates job creation to job-service
-- Admin privilege is determined by the `is_admin` flag in the `companies` table (checked against the Cognito `sub` claim)
+- Company self-registration (`POST /api/v1/admin/companies/register`)
+- Admin approves via `PUT /api/v1/admin/companies/{id}/verify` — only then can the company post jobs
+- Job delegation: `POST /api/v1/admin/jobs` calls job-service internally via RestTemplate
 
 ### AI Agent Service (`services/ai-agent-service` — port 8085)
-- Stores chat sessions in MongoDB `ai_chat_sessions` collection
-- On each message, calls Gemini `gemini-1.5-flash` with a system prompt that declares function tools: `search_jobs(position, city)` and `get_job_details(id)`
-- When Gemini requests a tool call, the service executes the corresponding internal API call, injects the result as a `functionResponse`, and re-submits to Gemini for the final answer
-- Returns a structured response: AI text + list of job cards (title, company, requirements, apply link)
-- No real-time streaming — full response returned in one HTTP call
+- Stores chat sessions in MongoDB `ai_chat_sessions`
+- Calls Gemini `gemini-2.0-flash` with function tools: `search_jobs(position, city)` and `get_job_details(id)`
+- Tool call loop: Gemini returns functionCall → service calls internal API → injects functionResponse → re-submits to Gemini
+- No streaming — full response in one HTTP call
 
 ### Frontend (`frontend` — port 3000)
-- Next.js 14 App Router; all pages under `app/`
-- Auth state managed by AWS Amplify (`@aws-amplify/auth`); Cognito tokens stored in browser and attached to all API requests
-- Server-side data fetching for job listings (SEO not required; RSC used for simplicity)
-- Key UI features: position + city autocomplete, browser geolocation → nearest jobs, "Son Aramalarim" recent searches panel, left-side filter pane with chip-style active filters, floating AI chat window (bottom-right, all authenticated pages), notification bell in header
+- Next.js 16.2.6 + React 19, App Router; all pages under `app/`
+- Auth via AWS Amplify; Cognito idToken attached to every API request via axios interceptor
+- All `/api/v1/*` requests proxied to API Gateway via `next.config.ts` rewrite (no CORS)
+- Header: profile avatar dropdown (Bilgilerim / Bildirimler tabs) + logout icon
+- Key pages: `/` (home + geolocation), `/search` (filters + results), `/jobs/[id]` (detail + apply), `/alerts`, `/profile`, `/admin`
 
 ---
 
@@ -120,6 +119,7 @@
 ```
 users
   id (UUID PK) · cognito_user_id (unique) · email · city · country · created_at
+  name · surname · phone · gender · age · profession   ← profil alanları
 
 companies
   id (UUID PK) · name · cognito_user_id · is_admin · is_verified · created_at
@@ -155,9 +155,9 @@ ai_chat_sessions
 ### Redis Keys
 
 ```
-job:{uuid}                     TTL 1h    — single job JSON (set on create, evicted on update/delete)
-jobs:city:{city}               TTL 15m   — list of job UUIDs for homepage nearby
-jobs:search:{sha256_of_params} TTL 10m   — paginated search result JSON
+job:{uuid}                     TTL 1h    — single job JSON
+jobs:city:{city}               TTL 15m   — nearby jobs list
+jobs:search:{sha256_of_params} TTL 10m   — paginated search result
 ```
 
 ---
@@ -172,11 +172,13 @@ All endpoints are prefixed `/api/v1/`. Pagination: `?page=0&size=20`.
 | Job | POST/PUT | `/jobs`, `/jobs/{id}` | Verified company/admin |
 | Job | DELETE | `/jobs/{id}` | Admin |
 | Job | POST | `/jobs/{id}/apply` | User |
+| Job | GET | `/jobs/my-applications` | User |
 | Search | POST | `/search` | Public |
-| Search | GET | `/search/recent`, `/search/results` | User / Public |
+| Search | GET | `/search/recent` | User / Public |
 | Notification | GET/PUT | `/notifications`, `/notifications/{id}/read` | User |
-| Notification | POST/GET/PUT/DELETE | `/alerts`, `/alerts/{id}` | User |
-| Notification | POST | `/scheduler/process-job-alerts`, `/scheduler/process-related-jobs` | Internal (EventBridge) |
+| Notification | POST/GET/DELETE | `/alerts`, `/alerts/{id}` | User |
+| Notification | POST | `/scheduler/process-job-alerts`, `/scheduler/process-related-jobs` | Internal |
+| Profile | GET/PUT | `/profile` | User |
 | Admin | POST | `/admin/companies/register` | User |
 | Admin | GET/PUT | `/admin/companies`, `/admin/companies/{id}/verify` | Admin |
 | Admin | POST | `/admin/jobs` | Verified company/admin |
@@ -185,29 +187,33 @@ All endpoints are prefixed `/api/v1/`. Pagination: `?page=0&size=20`.
 
 ---
 
-## Deployment (AWS ECS Fargate)
+## Deployment (Azure Container Apps)
 
 ```
-ECR Repository per service
+Azure Container Registry (ACR)
        ↓
-ECS Task Definition (Dockerfile → image)
+Docker image build (multi-stage Maven)
        ↓
-ECS Service (Fargate, VPC private subnet)
-       ↓
-Application Load Balancer (public)
-       ↓
-Route 53 (career.net domain)
+Azure Container Apps Environment
+  ├── job-service          :8081
+  ├── search-service       :8082
+  ├── notification-service :8083
+  ├── admin-service        :8084
+  ├── ai-agent-service     :8085
+  ├── api-gateway          :8080
+  └── frontend             :3000
 
 External managed services:
-  Supabase (PostgreSQL)   — primary DB (cloud, not AWS RDS)
-  MongoDB Atlas           — NoSQL search history + AI sessions
-  Upstash / ElastiCache   — Redis job cache
-  Amazon MQ (RabbitMQ)    — message queue
-  AWS Cognito             — auth
-  AWS EventBridge         — cron triggers for notification tasks
-  Google Gemini API       — AI model for chat agent
+  Supabase (PostgreSQL)  — primary DB; use pooler URL + sslmode=require
+  MongoDB Atlas          — NoSQL search history + AI sessions
+  Upstash (Redis)        — job cache (rediss:// SSL)
+  CloudAMQP (RabbitMQ)  — message queue (amqps:// SSL, port 5671)
+  AWS Cognito            — auth (JWT)
+  Google Gemini API      — AI model
 ```
 
 Each service has its own `Dockerfile` using a multi-stage Maven build:
 1. `maven:3.9-eclipse-temurin-17` — compiles and packages the JAR
 2. `eclipse-temurin:17-jre-alpine` — runs the JAR (slim runtime image)
+
+**Important:** Build with `--platform linux/amd64` on Apple Silicon Macs.

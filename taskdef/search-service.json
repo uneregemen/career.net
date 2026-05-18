@@ -1,14 +1,16 @@
 {
   "family": "career-net-search-service",
   "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::615471834704:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "search-service",
-      "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/career-net-search-service:latest",
+      "image": "615471834704.dkr.ecr.eu-north-1.amazonaws.com/career-net-search-service:latest",
       "portMappings": [
         {
           "containerPort": 8082,
@@ -16,13 +18,28 @@
         }
       ],
       "environment": [
-        { "name": "MONGO_DATABASE",   "value": "careerdb" },
-        { "name": "AWS_REGION",       "value": "eu-north-1" },
-        { "name": "JOB_SERVICE_URL",  "value": "http://job-service:8081" }
+        {
+          "name": "MONGO_DATABASE",
+          "value": "careerdb"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "eu-north-1"
+        },
+        {
+          "name": "JOB_SERVICE_URL",
+          "value": "http://job-service.career-net.local:8081"
+        }
       ],
       "secrets": [
-        { "name": "MONGO_URI",              "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/MONGO_URI" },
-        { "name": "COGNITO_USER_POOL_ID",   "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/COGNITO_USER_POOL_ID" }
+        {
+          "name": "MONGO_URI",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/MONGO_URI-fxnpFf"
+        },
+        {
+          "name": "COGNITO_USER_POOL_ID",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/COGNITO_USER_POOL_ID-bGgkfr"
+        }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

@@ -1,14 +1,16 @@
 {
   "family": "career-net-job-service",
   "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::615471834704:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "job-service",
-      "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/career-net-job-service:latest",
+      "image": "615471834704.dkr.ecr.eu-north-1.amazonaws.com/career-net-job-service:latest",
       "portMappings": [
         {
           "containerPort": 8081,
@@ -16,22 +18,64 @@
         }
       ],
       "environment": [
-        { "name": "DB_PORT",                    "value": "5432" },
-        { "name": "DB_NAME",                    "value": "postgres" },
-        { "name": "DB_USERNAME",                "value": "postgres" },
-        { "name": "AWS_REGION",                 "value": "eu-north-1" },
-        { "name": "RABBITMQ_PORT",              "value": "5671" },
-        { "name": "RABBITMQ_QUEUE_JOB_CREATED", "value": "job.created" }
+        {
+          "name": "DB_PORT",
+          "value": "5432"
+        },
+        {
+          "name": "DB_NAME",
+          "value": "postgres"
+        },
+        {
+          "name": "DB_USERNAME",
+          "value": "postgres.mqjvwjqtbwknugtfogal"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "eu-north-1"
+        },
+        {
+          "name": "RABBITMQ_PORT",
+          "value": "5671"
+        },
+        {
+          "name": "RABBITMQ_QUEUE_JOB_CREATED",
+          "value": "job.created"
+        }
       ],
       "secrets": [
-        { "name": "DB_HOST",              "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_HOST" },
-        { "name": "DB_PASSWORD",          "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_PASSWORD" },
-        { "name": "REDIS_URL",            "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/REDIS_URL" },
-        { "name": "RABBITMQ_HOST",        "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_HOST" },
-        { "name": "RABBITMQ_USERNAME",    "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_USERNAME" },
-        { "name": "RABBITMQ_PASSWORD",    "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_PASSWORD" },
-        { "name": "RABBITMQ_VHOST",       "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_VHOST" },
-        { "name": "COGNITO_USER_POOL_ID", "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/COGNITO_USER_POOL_ID" }
+        {
+          "name": "DB_HOST",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/DB_HOST-RhV4cp"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/DB_PASSWORD-LVMUeW"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/REDIS_URL-ZqwXr6"
+        },
+        {
+          "name": "RABBITMQ_HOST",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/RABBITMQ_HOST-lkcgxe"
+        },
+        {
+          "name": "RABBITMQ_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/RABBITMQ_USERNAME-CdsmDF"
+        },
+        {
+          "name": "RABBITMQ_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/RABBITMQ_PASSWORD-PBZ28k"
+        },
+        {
+          "name": "RABBITMQ_VHOST",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/RABBITMQ_VHOST-NUVff9"
+        },
+        {
+          "name": "COGNITO_USER_POOL_ID",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:615471834704:secret:career-net/COGNITO_USER_POOL_ID-bGgkfr"
+        }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
