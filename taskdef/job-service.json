@@ -16,17 +16,21 @@
         }
       ],
       "environment": [
-        { "name": "DB_PORT",                  "value": "5432" },
-        { "name": "DB_NAME",                  "value": "postgres" },
-        { "name": "DB_USERNAME",              "value": "postgres" },
-        { "name": "AWS_REGION",               "value": "eu-north-1" },
+        { "name": "DB_PORT",                    "value": "5432" },
+        { "name": "DB_NAME",                    "value": "postgres" },
+        { "name": "DB_USERNAME",                "value": "postgres" },
+        { "name": "AWS_REGION",                 "value": "eu-north-1" },
+        { "name": "RABBITMQ_PORT",              "value": "5671" },
         { "name": "RABBITMQ_QUEUE_JOB_CREATED", "value": "job.created" }
       ],
       "secrets": [
-        { "name": "DB_HOST",       "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_HOST" },
-        { "name": "DB_PASSWORD",   "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_PASSWORD" },
-        { "name": "REDIS_URL",     "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/REDIS_URL" },
-        { "name": "RABBITMQ_URL",  "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_URL" },
+        { "name": "DB_HOST",              "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_HOST" },
+        { "name": "DB_PASSWORD",          "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/DB_PASSWORD" },
+        { "name": "REDIS_URL",            "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/REDIS_URL" },
+        { "name": "RABBITMQ_HOST",        "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_HOST" },
+        { "name": "RABBITMQ_USERNAME",    "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_USERNAME" },
+        { "name": "RABBITMQ_PASSWORD",    "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_PASSWORD" },
+        { "name": "RABBITMQ_VHOST",       "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/RABBITMQ_VHOST" },
         { "name": "COGNITO_USER_POOL_ID", "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:career-net/COGNITO_USER_POOL_ID" }
       ],
       "logConfiguration": {

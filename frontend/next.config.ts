@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Tüm /api/v1/* isteklerini Next.js üzerinden API Gateway'e proxy'le
-  // Bu sayede CORS sorunu olmaz, env var parse sorunu olmaz
+  output: "standalone",   // ECS Fargate Dockerfile için gerekli
   async rewrites() {
     return [
       {
