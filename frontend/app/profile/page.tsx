@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Save } from "lucide-react";
 import { profileApi } from "@/lib/api";
@@ -24,15 +24,10 @@ export default function ProfilePage() {
 
   const [form, setForm] = useState<UserProfile>({});
 
-  // Profil yüklenince formu doldur
-  useQuery<UserProfile>({
-    queryKey: ["profile"],
-    queryFn: () => profileApi.get().then((r) => r.data),
-    select: (data) => {
-      setForm(data);
-      return data;
-    },
-  });
+  // Profil yüklenince formu bir kez doldur
+  useEffect(() => {
+    if (profile) setForm(profile);
+  }, [profile]);
 
   const update = useMutation({
     mutationFn: () => profileApi.update(form as Record<string, unknown>),

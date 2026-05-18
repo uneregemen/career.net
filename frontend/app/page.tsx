@@ -77,23 +77,24 @@ export default function HomePage() {
   return (
     <div className="space-y-10">
 
-      {/* Arama Kutuları */}
-      <section className="bg-white rounded-2xl shadow-sm p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">İş Bul</h1>
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 shadow-lg">
+        <h1 className="text-3xl font-bold text-white mb-1">Hayalindeki İşi Bul</h1>
+        <p className="text-blue-200 text-sm mb-6">Binlerce ilan arasından sana uygun fırsatı keşfet</p>
         <div className="flex gap-3 flex-wrap">
 
           {/* Pozisyon */}
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={18} className="absolute left-3 top-3.5 text-gray-400" />
+            <Search size={18} className="absolute left-3 top-3.5 text-blue-200" />
             <input
               value={position}
               onChange={(e) => handlePositionChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Pozisyon (ör: Java Developer)"
-              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-3 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 bg-white/15 text-white placeholder-blue-200 backdrop-blur"
             />
             {positionSuggestions.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow">
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl mt-1 shadow-lg">
                 {positionSuggestions.map((s) => (
                   <li key={s} onClick={() => { setPosition(s); setPositionSuggestions([]); }}
                     className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>
@@ -104,16 +105,16 @@ export default function HomePage() {
 
           {/* Şehir */}
           <div className="relative flex-1 min-w-[200px]">
-            <MapPin size={18} className="absolute left-3 top-3.5 text-gray-400" />
+            <MapPin size={18} className="absolute left-3 top-3.5 text-blue-200" />
             <input
               value={city}
               onChange={(e) => handleCityChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Şehir"
-              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-3 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 bg-white/15 text-white placeholder-blue-200 backdrop-blur"
             />
             {citySuggestions.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow">
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl mt-1 shadow-lg">
                 {citySuggestions.map((s) => (
                   <li key={s} onClick={() => { setCity(s); setCitySuggestions([]); }}
                     className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>
@@ -123,7 +124,7 @@ export default function HomePage() {
           </div>
 
           <button onClick={handleSearch}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            className="px-8 py-3 bg-white text-blue-700 rounded-xl hover:bg-blue-50 font-semibold shadow transition-colors shrink-0">
             Ara
           </button>
         </div>
