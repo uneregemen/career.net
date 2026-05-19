@@ -1,80 +1,80 @@
 # career.net
 
-Modern bir iş arama platformu. Bağımsız olarak deploy edilebilen mikroservis mimarisi üzerine kurulmuştur.
+A modern job board platform built with an independently deployable microservices architecture.
 
 **Live Demo:** [career-net-ebon.vercel.app](https://career-net-ebon.vercel.app)
 
 ---
 
-## Teknoloji Yığını
+## Tech Stack
 
-| Katman | Teknoloji |
+| Layer | Technology |
 |---|---|
 | Backend | Java 17 + Spring Boot 3.x |
 | Frontend | Next.js 16.2.6 + React 19 + TypeScript |
-| Stil | Tailwind CSS v4 |
-| Birincil Veritabanı | PostgreSQL (Supabase) |
+| Styling | Tailwind CSS v4 |
+| Primary Database | PostgreSQL (Supabase) |
 | NoSQL | MongoDB Atlas |
 | Cache | Redis (Upstash) |
-| Mesaj Kuyruğu | RabbitMQ (CloudAMQP) |
-| Kimlik Doğrulama | AWS Cognito |
+| Message Queue | RabbitMQ (CloudAMQP) |
+| Authentication | AWS Cognito |
 | AI Model | Google Gemini 2.0 Flash |
-| Container | Docker |
-| Bulut | Azure Container Apps + Vercel |
+| Containerization | Docker |
+| Cloud | Azure Container Apps + Vercel |
 
 ---
 
-## Servisler
+## Services
 
-| Servis | Port | Açıklama |
+| Service | Port | Responsibility |
 |---|---|---|
-| `api-gateway` | 8080 | Tüm trafiğin giriş noktası, JWT doğrulama |
-| `job-service` | 8081 | İş ilanı CRUD, Redis cache, RabbitMQ yayını |
-| `search-service` | 8082 | İş arama, MongoDB'ye arama geçmişi kaydı |
-| `notification-service` | 8083 | Bildirimler, iş alarmları, kullanıcı profili |
-| `admin-service` | 8084 | Şirket kaydı ve onay yönetimi |
-| `ai-agent-service` | 8085 | Gemini destekli AI chat asistanı |
+| `api-gateway` | 8080 | Single entry point, JWT validation |
+| `job-service` | 8081 | Job CRUD, Redis cache, RabbitMQ publisher |
+| `search-service` | 8082 | Job search, MongoDB search history |
+| `notification-service` | 8083 | Notifications, job alerts, user profiles |
+| `admin-service` | 8084 | Company registration and approval |
+| `ai-agent-service` | 8085 | Gemini-powered AI chat assistant |
 | `frontend` | 3000 | Next.js UI |
 
 ---
 
-## Özellikler
+## Features
 
-- **İş Arama** — Pozisyon, şehir, ülke, çalışma şekli filtreleri; Türkçe karakter desteği
-- **Yakın İlanlar** — Tarayıcı konum izni ile yakın şehirdeki ilanlar (OpenStreetMap)
-- **Otomatik Tamamlama** — Pozisyon ve şehir arama kutularında anlık öneriler
-- **Şirket Onay Akışı** — Şirket kaydı → admin onayı → ilan yayınlama
-- **Bildirim Sistemi** — İş alarmı oluştur, eşleşen yeni ilanlar için bildirim al
-- **Kullanıcı Profili** — Ad, soyad, telefon, cinsiyet, yaş, meslek
-- **Başvuru Takibi** — Başvurulan ilanlar header dropdown'ında listelenir
-- **AI Asistan** — Gemini destekli chat; iş ara, ilan detayı sorgula
-- **Kimlik Doğrulama** — AWS Cognito ile kayıt, giriş, e-posta doğrulama
+- **Job Search** — Filter by position, city, country, working preference; Turkish character support
+- **Nearby Jobs** — Browser geolocation → nearest jobs via OpenStreetMap
+- **Autocomplete** — Real-time suggestions for position and city fields
+- **Company Approval Flow** — Company registers → admin approves → job posting enabled
+- **Notification System** — Create job alerts, receive notifications for matching new jobs
+- **User Profile** — Name, surname, phone, gender, age, profession
+- **Application Tracking** — Applied jobs listed in the header dropdown
+- **AI Assistant** — Gemini-powered chat; search jobs and query job details conversationally
+- **Authentication** — AWS Cognito — register, login, email verification
 
 ---
 
-## Yerel Geliştirme
+## Local Development
 
-### Ön Koşullar
+### Prerequisites
 
 - Docker Desktop
 - Java 17 + Maven
 - Node.js 20+
 
-### Altyapıyı Başlat
+### Start Local Infrastructure
 
 ```bash
 docker-compose up -d
 ```
 
-MongoDB, Redis ve RabbitMQ'yu yerel olarak başlatır.
+Starts MongoDB, Redis, and RabbitMQ locally.
 
-### Ortam Değişkenleri
+### Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` dosyasını doldurun:
+Fill in `.env`:
 
 ```env
 # PostgreSQL (Supabase)
@@ -100,14 +100,16 @@ COGNITO_USER_POOL_ID=...
 GEMINI_API_KEY=...
 ```
 
-### Servisleri Çalıştır
+### Run a Service
 
 ```bash
-# Bir servis başlatmak için
 cd services/job-service
 mvn spring-boot:run
+```
 
-# Frontend
+### Run the Frontend
+
+```bash
 cd frontend
 npm install
 npm run dev
@@ -117,20 +119,20 @@ npm run dev
 
 ## Deployment
 
-Backend **Azure Container Apps**, frontend **Vercel** üzerinde deploy edilmiştir.
+Backend is deployed on **Azure Container Apps**, frontend on **Vercel**.
 
-### Docker Image Build
+### Build & Push Docker Image
 
 ```bash
 docker build --platform linux/amd64 -t ghcr.io/USERNAME/career-net-job-service:latest services/job-service/
 docker push ghcr.io/USERNAME/career-net-job-service:latest
 ```
 
-Detaylı deployment adımları için: [docs/deployment.md](docs/deployment.md)
+Full deployment guide: [docs/deployment.md](docs/deployment.md)
 
 ---
 
-## Mimari
+## Architecture
 
 ```
 Frontend (Vercel)
@@ -138,18 +140,18 @@ Frontend (Vercel)
       ▼
 API Gateway (Azure Container Apps)
       │
-      ├── job-service        → PostgreSQL + Redis + RabbitMQ
-      ├── search-service     → MongoDB + job-service
+      ├── job-service          → PostgreSQL + Redis + RabbitMQ
+      ├── search-service       → MongoDB + job-service
       ├── notification-service → PostgreSQL + MongoDB + RabbitMQ
-      ├── admin-service      → PostgreSQL + job-service
-      └── ai-agent-service   → MongoDB + Gemini API
+      ├── admin-service        → PostgreSQL + job-service
+      └── ai-agent-service     → MongoDB + Gemini API
 ```
 
-Detaylı mimari: [docs/architecture.md](docs/architecture.md)
+For detailed architecture: [docs/architecture.md](docs/architecture.md)
 
 ---
 
-## Proje Yapısı
+## Project Structure
 
 ```
 career.net/
