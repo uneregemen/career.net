@@ -78,7 +78,7 @@ Fill in `.env`:
 
 ```env
 # PostgreSQL (Supabase)
-DB_HOST=aws-1-eu-central-1.pooler.supabase.com
+DB_HOST=...
 DB_PASSWORD=...
 
 # MongoDB Atlas
