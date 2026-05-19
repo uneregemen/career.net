@@ -72,11 +72,16 @@ public class SearchService {
                 .queryParam("size", req.getSize());
 
         if (req.getPosition() != null)        builder.queryParam("position", req.getPosition());
-        if (req.getCity() != null)             builder.queryParam("city", req.getCity());
+        if (req.getCity() != null)             builder.queryParam("city", normalize(req.getCity()));
         if (req.getCountry() != null)          builder.queryParam("country", req.getCountry());
         if (req.getTown() != null)             builder.queryParam("town", req.getTown());
         if (req.getWorkingPreference() != null) builder.queryParam("workingPreference", req.getWorkingPreference());
 
         return builder.toUriString();
+    }
+
+    // İ→I, ı→i normalize — encoding sorunlarını önler
+    private String normalize(String s) {
+        return s.replace("İ", "I").replace("ı", "i").toLowerCase(java.util.Locale.ENGLISH);
     }
 }
