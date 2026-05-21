@@ -22,7 +22,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",
             "https://career.net",
-            "https://career-net-ebon.vercel.app"
+            "https://career-net-ebon.vercel.app",
+            "https://career-net-git-main-uneregemens-projects.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // allowCredentials=true iken header'ları tek tek belirtmek gerekir — wildcard * çalışmaz
