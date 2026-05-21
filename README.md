@@ -132,6 +132,90 @@ Full deployment guide: [docs/deployment.md](docs/deployment.md)
 
 ---
 
+## Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    users {
+        UUID id PK
+        VARCHAR cognito_user_id UK
+        VARCHAR email
+        VARCHAR name
+        VARCHAR surname
+        VARCHAR phone
+        VARCHAR gender
+        INT age
+        VARCHAR profession
+        VARCHAR city
+        VARCHAR country
+        TIMESTAMP created_at
+    }
+
+    companies {
+        UUID id PK
+        VARCHAR name
+        VARCHAR cognito_user_id
+        BOOLEAN is_admin
+        BOOLEAN is_verified
+        TIMESTAMP created_at
+    }
+
+    jobs {
+        UUID id PK
+        VARCHAR title
+        TEXT description
+        UUID company_id FK
+        VARCHAR country
+        VARCHAR city
+        VARCHAR town
+        VARCHAR working_preference
+        TEXT requirements
+        VARCHAR salary_range
+        TIMESTAMP posted_at
+        TIMESTAMP expires_at
+        BOOLEAN is_active
+    }
+
+    applications {
+        UUID id PK
+        UUID job_id FK
+        VARCHAR user_id
+        TIMESTAMP applied_at
+        VARCHAR status
+    }
+
+    notifications {
+        UUID id PK
+        VARCHAR user_id
+        VARCHAR title
+        TEXT message
+        UUID job_id FK
+        BOOLEAN is_read
+        TIMESTAMP created_at
+    }
+
+    job_alerts {
+        UUID id PK
+        VARCHAR user_id
+        VARCHAR position_keywords
+        VARCHAR city
+        VARCHAR working_preference
+        BOOLEAN is_active
+        TIMESTAMP created_at
+    }
+
+    companies ||--o{ jobs : "posts"
+    jobs ||--o{ applications : "receives"
+    jobs ||--o{ notifications : "triggers"
+    users ||--o{ applications : "submits"
+    users ||--o{ job_alerts : "creates"
+    users ||--o{ notifications : "receives"
+```
+
+> **Not:** `applications.user_id` ve `notifications.user_id`, `users.cognito_user_id` üzerinden ilişkilendirilir (UUID FK değil, Cognito sub string).
+
+---
+
 ## Architecture
 
 ```
