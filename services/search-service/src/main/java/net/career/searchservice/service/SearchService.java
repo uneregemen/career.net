@@ -8,7 +8,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,10 +21,23 @@ public class SearchService {
     private final WebClient jobServiceClient;
 
     public Map<String, Object> search(SearchRequest request, Authentication auth) {
-        // Call Job Service for actual results
-        String uri = buildJobSearchUri(request);
         Map<String, Object> results = jobServiceClient.get()
-                .uri(uri)
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/api/v1/jobs/search")
+                            .queryParam("page", request.getPage())
+                            .queryParam("size", request.getSize());
+                    if (request.getPosition() != null && !request.getPosition().isBlank())
+                        uriBuilder.queryParam("position", request.getPosition());
+                    if (request.getCity() != null && !request.getCity().isBlank())
+                        uriBuilder.queryParam("city", normalize(request.getCity()));
+                    if (request.getCountry() != null && !request.getCountry().isBlank())
+                        uriBuilder.queryParam("country", request.getCountry());
+                    if (request.getTown() != null && !request.getTown().isBlank())
+                        uriBuilder.queryParam("town", request.getTown());
+                    if (request.getWorkingPreference() != null && !request.getWorkingPreference().isBlank())
+                        uriBuilder.queryParam("workingPreference", request.getWorkingPreference());
+                    return uriBuilder.build();
+                })
                 .retrieve()
                 .bodyToMono(Map.class)
                 .block();
@@ -64,20 +76,6 @@ public class SearchService {
     // Used by notification-service to fetch a user's recent search terms
     public List<JobSearch> getSearchesSince(String userId, LocalDateTime since) {
         return searchRepository.findByUserIdAndCreatedAtAfter(userId, since);
-    }
-
-    private String buildJobSearchUri(SearchRequest req) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/api/v1/jobs/search")
-                .queryParam("page", req.getPage())
-                .queryParam("size", req.getSize());
-
-        if (req.getPosition() != null)        builder.queryParam("position", req.getPosition());
-        if (req.getCity() != null)             builder.queryParam("city", normalize(req.getCity()));
-        if (req.getCountry() != null)          builder.queryParam("country", req.getCountry());
-        if (req.getTown() != null)             builder.queryParam("town", req.getTown());
-        if (req.getWorkingPreference() != null) builder.queryParam("workingPreference", req.getWorkingPreference());
-
-        return builder.build().encode().toUriString();
     }
 
     // İ→I, ı→i normalize — encoding sorunlarını önler
