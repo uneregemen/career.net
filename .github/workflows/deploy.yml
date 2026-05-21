@@ -1,0 +1,197 @@
+name: Build & Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+
+env:
+  RG: career-net-rg
+
+jobs:
+  # ── Hangi servisler değişti? ──────────────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api-gateway:          ${{ steps.filter.outputs.api-gateway }}
+      job-service:          ${{ steps.filter.outputs.job-service }}
+      search-service:       ${{ steps.filter.outputs.search-service }}
+      notification-service: ${{ steps.filter.outputs.notification-service }}
+      admin-service:        ${{ steps.filter.outputs.admin-service }}
+      ai-agent-service:     ${{ steps.filter.outputs.ai-agent-service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api-gateway:
+              - 'services/api-gateway/**'
+            job-service:
+              - 'services/job-service/**'
+            search-service:
+              - 'services/search-service/**'
+            notification-service:
+              - 'services/notification-service/**'
+            admin-service:
+              - 'services/admin-service/**'
+            ai-agent-service:
+              - 'services/ai-agent-service/**'
+
+  # ── Ortak: ACR'ye login + imaj build + push + Container App güncelle ──────────
+  # Her servis için ayrı job — sadece değişen servis rebuild edilir
+
+  deploy-api-gateway:
+    needs: changes
+    if: needs.changes.outputs.api-gateway == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & Push
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/api-gateway:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE services/api-gateway
+          docker push $IMAGE
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name api-gateway \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/api-gateway:${{ github.sha }}
+
+  deploy-job-service:
+    needs: changes
+    if: needs.changes.outputs.job-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & Push
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/job-service:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE services/job-service
+          docker push $IMAGE
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name job-service \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/job-service:${{ github.sha }}
+
+  deploy-search-service:
+    needs: changes
+    if: needs.changes.outputs.search-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & Push
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/search-service:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE services/search-service
+          docker push $IMAGE
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name search-service \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/search-service:${{ github.sha }}
+
+  deploy-notification-service:
+    needs: changes
+    if: needs.changes.outputs.notification-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & Push
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/notification-service:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE services/notification-service
+          docker push $IMAGE
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name notification-service \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/notification-service:${{ github.sha }}
+
+  deploy-admin-service:
+    needs: changes
+    if: needs.changes.outputs.admin-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & Push
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/admin-service:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE services/admin-service
+          docker push $IMAGE
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name admin-service \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/admin-service:${{ github.sha }}
+
+  deploy-ai-agent-service:
+    needs: changes
+    if: needs.changes.outputs.ai-agent-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & Push
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/ai-agent-service:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE services/ai-agent-service
+          docker push $IMAGE
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name ai-agent-service \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/ai-agent-service:${{ github.sha }}
