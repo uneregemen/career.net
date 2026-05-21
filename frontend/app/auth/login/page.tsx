@@ -56,11 +56,21 @@ export default function LoginPage() {
   const handleRegister = async () => {
     setError(""); setLoading(true);
     try {
-      await signUp({ username: email, password, options: { userAttributes: { email } } });
-      setMode("confirm");
+      const { nextStep } = await signUp({ username: email, password, options: { userAttributes: { email } } });
+      if (nextStep.signUpStep === "CONFIRM_SIGN_UP") {
+        setMode("confirm");
+      } else {
+        // Cognito auto-confirm açıksa direkt giriş yap
+        await handleLoginAfterConfirm();
+      }
     } catch (e: any) {
       setError(e.message || "Kayıt başarısız");
     } finally { setLoading(false); }
+  };
+
+  const handleLoginAfterConfirm = async () => {
+    const { nextStep } = await signIn({ username: email, password });
+    if (nextStep.signInStep === "DONE") router.push("/");
   };
 
   const handleConfirm = async () => {
