@@ -195,3 +195,4 @@ jobs:
             --name ai-agent-service \
             --resource-group ${{ env.RG }} \
             --image ${{ secrets.ACR_LOGIN_SERVER }}/ai-agent-service:${{ github.sha }}
+
