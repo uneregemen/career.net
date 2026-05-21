@@ -4,6 +4,8 @@ A modern job board platform built with an independently deployable microservices
 
 **Live Demo:** [career-net-ebon.vercel.app](https://career-net-ebon.vercel.app)
 
+**Video Link:** https://drive.google.com/file/d/1oNYiyIjN71FIu5jwe05xElPwfgFs6qKS/view?usp=share_link
+
 ---
 
 ## Tech Stack
