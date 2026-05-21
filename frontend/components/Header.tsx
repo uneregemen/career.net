@@ -194,11 +194,14 @@ export default function Header() {
                                     ? "bg-yellow-100 text-yellow-700"
                                     : app.status === "ACCEPTED"
                                     ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-500"
+                                    : app.status === "REJECTED"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-blue-50 text-blue-600"
                                 }`}>
                                   {app.status === "PENDING" ? "Beklemede"
-                                    : app.status === "ACCEPTED" ? "Kabul"
-                                    : app.status ?? "Beklemede"}
+                                    : app.status === "ACCEPTED" ? "Kabul edildi"
+                                    : app.status === "REJECTED" ? "Reddedildi"
+                                    : "Başvuruldu"}
                                 </span>
                               </Link>
                             ))
@@ -220,7 +223,12 @@ export default function Header() {
                               key={n.id}
                               href={`/jobs/${n.jobId}`}
                               onClick={() => {
-                                notificationsApi.markRead(n.id);
+                                qc.setQueryData<Notification[]>(["notifications"], (old) =>
+                                  (old ?? []).filter((x) => x.id !== n.id)
+                                );
+                                notificationsApi.markRead(n.id).catch(() => {
+                                  qc.invalidateQueries({ queryKey: ["notifications"] });
+                                });
                                 setDropdownOpen(false);
                               }}
                               className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0"

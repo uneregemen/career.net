@@ -78,6 +78,8 @@
 - All job reads go through Redis cache (`@Cacheable`); cache is evicted on writes. Cache errors are swallowed gracefully — service falls back to DB if Redis is unavailable.
 - Publishes a `JobCreatedEvent` to RabbitMQ `job.created` queue on every new job posting
 - Autocomplete and city search normalize Turkish characters (İ→I, ı→i) for case-insensitive matching
+- Application status lifecycle: `PENDING` (default on creation) → `ACCEPTED` or `REJECTED` (set by company owner)
+- `ApplicantUser` entity (read-only, `@Immutable`) maps to the shared `users` table — used to enrich application responses with applicant name/email via a batch lookup
 
 ### Search Service (`services/search-service` — port 8082)
 - Accepts search queries (position, city, country, town, workingPreference)
@@ -107,8 +109,10 @@
 - Next.js 16.2.6 + React 19, App Router; all pages under `app/`
 - Auth via AWS Amplify; Cognito idToken attached to every API request via axios interceptor
 - All `/api/v1/*` requests proxied to API Gateway via `next.config.ts` rewrite (no CORS)
-- Header: profile avatar dropdown (Bilgilerim / Bildirimler tabs) + logout icon
-- Key pages: `/` (home + geolocation), `/search` (filters + results), `/jobs/[id]` (detail + apply), `/alerts`, `/profile`, `/admin`
+- Header: avatar + isim dropdown; Başvurularım / Bildirimler tabs; kaydettiklerim ikonu; bildirime tıklanınca optimistic update ile badge anında azalır
+- Saved jobs (bookmark) stored in `localStorage` under key `careernet_saved_jobs`; no backend required
+- Recent searches stored in `localStorage` under key `careernet_recent_searches` (last 6, silinebilir)
+- Key pages: `/` (home + geolocation + sidebar), `/search` (toggle filters + skeleton loading), `/jobs/[id]` (2-col layout — sticky apply card), `/alerts`, `/profile`, `/admin` (başvuru yönetimi dahil), `/saved` (kaydedilen ilanlar)
 
 ---
 
@@ -138,7 +142,8 @@ notifications
   is_read · created_at
 
 applications
-  id (UUID PK) · job_id (FK→jobs) · user_id (Cognito sub) · applied_at · status
+  id (UUID PK) · job_id (FK→jobs) · user_id (Cognito sub) · applied_at
+  status  VARCHAR(50)  DEFAULT 'PENDING'   — lifecycle: PENDING → ACCEPTED | REJECTED
 ```
 
 ### MongoDB Collections
@@ -173,6 +178,8 @@ All endpoints are prefixed `/api/v1/`. Pagination: `?page=0&size=20`.
 | Job | DELETE | `/jobs/{id}` | Admin |
 | Job | POST | `/jobs/{id}/apply` | User |
 | Job | GET | `/jobs/my-applications` | User |
+| Job | GET | `/jobs/my-job-applications` | Verified company — own jobs' applications (enriched with applicant name/email) |
+| Job | PUT | `/jobs/applications/{id}/status` | Verified company — set ACCEPTED \| REJECTED \| PENDING |
 | Search | POST | `/search` | Public |
 | Search | GET | `/search/recent` | User / Public |
 | Notification | GET/PUT | `/notifications`, `/notifications/{id}/read` | User |

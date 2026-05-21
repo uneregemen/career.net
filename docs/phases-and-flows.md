@@ -102,15 +102,35 @@
 
 | Page / Component | What it does |
 |---|---|
-| `/` Home | Position + city search with autocomplete; geolocation → nearest jobs; recent searches panel; gradient hero |
-| `/search` Results | Left filter pane (country, city, town, working preference); active filter chips; paginated job list |
-| `/jobs/[id]` Detail | Full job info (title, company, location with country, working type) + Apply button |
+| `/` Home | Hero arama kutusu (beyaz, inline); geolocation → yakındaki ilanlar; sol sidebar: son aramalar (silinebilir) + kaydedilenler sayacı + popüler kategoriler |
+| `/search` Results | Filtreler toggle ile gösterilir/gizlenir; aktif filtre chip'leri; skeleton loading; boş durum mesajı; sayfalama |
+| `/jobs/[id]` Detail | 2 kolonlu layout — sol: iş tanımı + nitelikler; sağ: sticky başvur kartı + kaydet butonu; "X gün önce" zamanı |
+| `/saved` Kaydettiklerim | `localStorage`'dan bookmark'lanan ilanları çeker; hiç yoksa boş durum mesajı |
 | `/alerts` | Create/list/delete job alerts |
-| `/admin` | Company registration + job posting form (country field included) |
+| `/admin` | Başvuru Yönetimi (ilan bazında gruplu, kabul/reddet) + şirket onay listesi + şirket kaydı + ilan yayınlama |
 | `/profile` | View + edit profile (name, surname, email, phone, gender, age, profession) |
 | `/auth/login` | Cognito sign-in/register via AWS Amplify |
-| `<Header />` | Profile avatar dropdown (Bilgilerim / Bildirimler tabs + başvurular listesi) + logout icon |
+| `<Header />` | Avatar + isim + dropdown; Başvurularım / Bildirimler tabs; bildirime tıklayınca optimistic update; Kaydettiklerim ikonu |
+| `<JobCard />` | Bookmark toggle (localStorage); "X dk/saat/gün önce" zaman etiketi; compact prop desteği |
 | `<ChatWindow />` | Floating AI chat (bottom-right) |
+
+---
+
+### Phase 10 — Application Management ✅ Done
+**Goal:** Company owners can review and accept/reject applications for their own job postings.
+
+| Task | Key Detail |
+|---|---|
+| `ApplicantUser` entity | Read-only (`@Immutable`) JPA entity mapped to the shared `users` table; exposes `cognitoUserId`, `name`, `surname`, `email` |
+| `ApplicantUserRepository` | `findByCognitoUserIdIn(Collection)` — batch fetch to avoid N+1 |
+| `ApplicationRepository` JPQL query | `JOIN FETCH a.job j JOIN FETCH j.company WHERE c.cognitoUserId = :ownerUserId` — single query loads applications + jobs + companies |
+| `ApplicationService.getApplicationsForMyJobs` | Fetches applications, batch-fetches users, merges into `ApplicationResponse` with `applicantName` + `applicantEmail` |
+| `ApplicationService.updateStatus` | Validates caller owns the job (`job.company.cognitoUserId == auth`); allows PENDING → ACCEPTED \| REJECTED; rejects unknown statuses |
+| `GET /api/v1/jobs/my-job-applications` | Returns enriched list; authenticated; added before `GET /api/v1/jobs/**` permitAll in SecurityConfig |
+| `PUT /api/v1/jobs/applications/{id}/status` | Body: `{ "status": "ACCEPTED" }` — covered by existing `PUT /api/v1/jobs/**` authenticated rule |
+| `ApplicationResponse` updated | Added `applicantName`, `applicantEmail` fields; `from(app, user)` overload; existing `from(app)` unchanged |
+| Application default status | Changed from `"APPLIED"` → `"PENDING"` in `@PrePersist`; `init.sql` default updated accordingly |
+| Admin panel UI | "Başvuru Yönetimi" card: ilan bazında accordion grupları; her başvuranda avatar + isim + email + tarih; PENDING için Kabul/Reddet butonları; durum badge'leri |
 
 ---
 
@@ -245,11 +265,50 @@ Browser
 ### 8. Apply to a Job
 
 ```
-Browser (user clicks Apply)
+Browser (user clicks "Hemen Başvur")
   │── POST /api/v1/jobs/{id}/apply ──► Gateway ──► Job Service
-  │                                        │── check already applied? → 409
-  │                                        │── INSERT INTO applications
-  │◄── { applicationId, status: "PENDING" }
+  │                                        │── check already applied? → 409 RuntimeException
+  │                                        │── INSERT INTO applications (status = 'PENDING')
+  │◄── { applicationId, jobTitle, status: "PENDING" }
   │
-  Header dropdown "Başvurularım" section shows the new application
+  Job detail page shows "✓ Başvurunuz alındı!" confirmation banner
+  Header dropdown "Başvurularım" tab shows the new application with "Beklemede" badge
+```
+
+---
+
+### 9. Company Reviews Applications
+
+```
+Company Owner (authenticated, is_verified = true)
+  │── GET /api/v1/jobs/my-job-applications ──► Gateway ──► Job Service
+  │                                                │── JPQL: SELECT a JOIN FETCH job JOIN FETCH company
+  │                                                │         WHERE company.cognitoUserId = auth.sub
+  │                                                │── batch fetch applicant info from users table
+  │◄── [{ jobTitle, applicantName, applicantEmail, status, appliedAt }, ...]
+  │
+  Admin panel "Başvuru Yönetimi" groups by job, shows Kabul/Reddet buttons for PENDING
+  │
+  Company clicks "Kabul Et"
+  │── PUT /api/v1/jobs/applications/{id}/status { "status": "ACCEPTED" }
+  │                                                │── verify job.company.cognitoUserId == auth.sub
+  │                                                │── UPDATE applications SET status = 'ACCEPTED'
+  │◄── updated ApplicationResponse
+  │
+  React Query cache invalidated → badge updates to "Kabul edildi"
+  Applicant sees "Kabul edildi" in their Header dropdown "Başvurularım" tab
+```
+
+---
+
+### 10. Save a Job (Bookmark)
+
+```
+Browser (user clicks bookmark icon on any JobCard or job detail page)
+  │── localStorage.getItem("careernet_saved_jobs") → string[]
+  │── toggle: add or remove job id
+  │── localStorage.setItem(...)
+  │
+  No API call — entirely client-side
+  /saved page reads saved ids → fetches each job via GET /api/v1/jobs/{id}
 ```

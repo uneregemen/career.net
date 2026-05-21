@@ -48,6 +48,9 @@ export const notificationsApi = {
 // ── Applications ─────────────────────────────────────────────────────────────
 export const applicationsApi = {
   myApplications: () => api.get("/api/v1/jobs/my-applications"),
+  myJobApplications: () => api.get("/api/v1/jobs/my-job-applications"),
+  updateStatus: (id: string, status: "ACCEPTED" | "REJECTED" | "PENDING") =>
+    api.put(`/api/v1/jobs/applications/${id}/status`, { status }),
 };
 
 // ── Profile ───────────────────────────────────────────────────────────────────

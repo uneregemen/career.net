@@ -75,6 +75,8 @@ export interface Application {
   jobTitle: string;
   appliedAt: string;
   status: string;
+  applicantName?: string;
+  applicantEmail?: string;
 }
 
 export interface UserProfile {

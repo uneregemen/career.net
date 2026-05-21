@@ -18,6 +18,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.GET, "/api/v1/jobs/my-applications").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/jobs/my-job-applications").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/jobs/applications/*/status").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/jobs/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/jobs").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/jobs/**").authenticated()

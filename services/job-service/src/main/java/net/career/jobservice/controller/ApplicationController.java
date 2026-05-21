@@ -2,6 +2,7 @@ package net.career.jobservice.controller;
 
 import lombok.RequiredArgsConstructor;
 import net.career.jobservice.dto.ApplicationResponse;
+import net.career.jobservice.dto.StatusUpdateRequest;
 import net.career.jobservice.service.ApplicationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,5 +30,18 @@ public class ApplicationController {
     @GetMapping("/my-applications")
     public ResponseEntity<List<ApplicationResponse>> myApplications(Authentication auth) {
         return ResponseEntity.ok(applicationService.getMyApplications(auth.getName()));
+    }
+
+    @GetMapping("/my-job-applications")
+    public ResponseEntity<List<ApplicationResponse>> myJobApplications(Authentication auth) {
+        return ResponseEntity.ok(applicationService.getApplicationsForMyJobs(auth.getName()));
+    }
+
+    @PutMapping("/applications/{id}/status")
+    public ResponseEntity<ApplicationResponse> updateStatus(
+            @PathVariable UUID id,
+            @RequestBody StatusUpdateRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(applicationService.updateStatus(id, request.getStatus(), auth.getName()));
     }
 }

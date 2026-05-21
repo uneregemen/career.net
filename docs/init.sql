@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS applications (
     job_id UUID REFERENCES jobs(id),
     user_id VARCHAR(255) NOT NULL,
     applied_at TIMESTAMP DEFAULT now(),
-    status VARCHAR(50) DEFAULT 'APPLIED'
+    status VARCHAR(50) DEFAULT 'PENDING'
 );
 
 -- ── Seed data (dev only) ──────────────────────────────────────────────────────

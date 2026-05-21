@@ -29,6 +29,6 @@ public class Application {
     @PrePersist
     void prePersist() {
         appliedAt = LocalDateTime.now();
-        if (status == null) status = "APPLIED";
+        if (status == null) status = "PENDING";
     }
 }
