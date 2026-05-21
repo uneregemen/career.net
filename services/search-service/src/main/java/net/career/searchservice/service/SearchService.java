@@ -77,7 +77,7 @@ public class SearchService {
         if (req.getTown() != null)             builder.queryParam("town", req.getTown());
         if (req.getWorkingPreference() != null) builder.queryParam("workingPreference", req.getWorkingPreference());
 
-        return builder.toUriString();
+        return builder.build().encode().toUriString();
     }
 
     // İ→I, ı→i normalize — encoding sorunlarını önler
