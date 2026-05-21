@@ -76,7 +76,7 @@ jobs:
           az containerapp update \
             --name api-gateway \
             --resource-group ${{ env.RG }} \
-            --image ${{ env.IMAGE_PREFIX }}/career-net-api-gateway:latest
+            --image ${{ env.IMAGE_PREFIX }}/career-net-api-gateway:${{ github.sha }}
 
   deploy-job-service:
     needs: changes
@@ -107,7 +107,7 @@ jobs:
           az containerapp update \
             --name job-service \
             --resource-group ${{ env.RG }} \
-            --image ${{ env.IMAGE_PREFIX }}/career-net-job-service:latest
+            --image ${{ env.IMAGE_PREFIX }}/career-net-job-service:${{ github.sha }}
 
   deploy-search-service:
     needs: changes
@@ -138,7 +138,7 @@ jobs:
           az containerapp update \
             --name search-service \
             --resource-group ${{ env.RG }} \
-            --image ${{ env.IMAGE_PREFIX }}/career-net-search-service:latest
+            --image ${{ env.IMAGE_PREFIX }}/career-net-search-service:${{ github.sha }}
 
   deploy-notification-service:
     needs: changes
@@ -169,7 +169,7 @@ jobs:
           az containerapp update \
             --name notification-service \
             --resource-group ${{ env.RG }} \
-            --image ${{ env.IMAGE_PREFIX }}/career-net-notification-service:latest
+            --image ${{ env.IMAGE_PREFIX }}/career-net-notification-service:${{ github.sha }}
 
   deploy-admin-service:
     needs: changes
@@ -200,7 +200,7 @@ jobs:
           az containerapp update \
             --name admin-service \
             --resource-group ${{ env.RG }} \
-            --image ${{ env.IMAGE_PREFIX }}/career-net-admin-service:latest
+            --image ${{ env.IMAGE_PREFIX }}/career-net-admin-service:${{ github.sha }}
 
   deploy-ai-agent-service:
     needs: changes
@@ -231,4 +231,4 @@ jobs:
           az containerapp update \
             --name ai-agent-service \
             --resource-group ${{ env.RG }} \
-            --image ${{ env.IMAGE_PREFIX }}/career-net-ai-agent-service:latest
+            --image ${{ env.IMAGE_PREFIX }}/career-net-ai-agent-service:${{ github.sha }}
