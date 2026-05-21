@@ -3,6 +3,12 @@ name: Build & Deploy to Azure Container Apps
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Deploy edilecek servis (boş = tüm değişenler)'
+        required: false
+        default: ''
 
 env:
   RG: career-net-rg
@@ -43,7 +49,7 @@ jobs:
 
   deploy-api-gateway:
     needs: changes
-    if: needs.changes.outputs.api-gateway == 'true'
+    if: needs.changes.outputs.api-gateway == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,7 +80,7 @@ jobs:
 
   deploy-job-service:
     needs: changes
-    if: needs.changes.outputs.job-service == 'true'
+    if: needs.changes.outputs.job-service == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -105,7 +111,7 @@ jobs:
 
   deploy-search-service:
     needs: changes
-    if: needs.changes.outputs.search-service == 'true'
+    if: needs.changes.outputs.search-service == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -136,7 +142,7 @@ jobs:
 
   deploy-notification-service:
     needs: changes
-    if: needs.changes.outputs.notification-service == 'true'
+    if: needs.changes.outputs.notification-service == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -167,7 +173,7 @@ jobs:
 
   deploy-admin-service:
     needs: changes
-    if: needs.changes.outputs.admin-service == 'true'
+    if: needs.changes.outputs.admin-service == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -198,7 +204,7 @@ jobs:
 
   deploy-ai-agent-service:
     needs: changes
-    if: needs.changes.outputs.ai-agent-service == 'true'
+    if: needs.changes.outputs.ai-agent-service == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
