@@ -20,16 +20,17 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      api-gateway:          ${{ steps.filter.outputs.api-gateway }}
-      job-service:          ${{ steps.filter.outputs.job-service }}
-      search-service:       ${{ steps.filter.outputs.search-service }}
-      notification-service: ${{ steps.filter.outputs.notification-service }}
-      admin-service:        ${{ steps.filter.outputs.admin-service }}
-      ai-agent-service:     ${{ steps.filter.outputs.ai-agent-service }}
+      api-gateway:          ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.api-gateway }}
+      job-service:          ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.job-service }}
+      search-service:       ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.search-service }}
+      notification-service: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.notification-service }}
+      admin-service:        ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.admin-service }}
+      ai-agent-service:     ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.ai-agent-service }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name == 'push'
         with:
           filters: |
             api-gateway:
@@ -49,7 +50,7 @@ jobs:
 
   deploy-api-gateway:
     needs: changes
-    if: needs.changes.outputs.api-gateway == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.api-gateway == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -80,7 +81,7 @@ jobs:
 
   deploy-job-service:
     needs: changes
-    if: needs.changes.outputs.job-service == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.job-service == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -111,7 +112,7 @@ jobs:
 
   deploy-search-service:
     needs: changes
-    if: needs.changes.outputs.search-service == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.search-service == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -142,7 +143,7 @@ jobs:
 
   deploy-notification-service:
     needs: changes
-    if: needs.changes.outputs.notification-service == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.notification-service == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -173,7 +174,7 @@ jobs:
 
   deploy-admin-service:
     needs: changes
-    if: needs.changes.outputs.admin-service == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.admin-service == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -204,7 +205,7 @@ jobs:
 
   deploy-ai-agent-service:
     needs: changes
-    if: needs.changes.outputs.ai-agent-service == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.ai-agent-service == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
