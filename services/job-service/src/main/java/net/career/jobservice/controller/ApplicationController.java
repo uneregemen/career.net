@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -35,6 +36,11 @@ public class ApplicationController {
     @GetMapping("/my-job-applications")
     public ResponseEntity<List<ApplicationResponse>> myJobApplications(Authentication auth) {
         return ResponseEntity.ok(applicationService.getApplicationsForMyJobs(auth.getName()));
+    }
+
+    @GetMapping("/{id}/application-count")
+    public ResponseEntity<Map<String, Long>> applicationCount(@PathVariable UUID id) {
+        return ResponseEntity.ok(Map.of("count", applicationService.countByJobId(id)));
     }
 
     @PutMapping("/applications/{id}/status")

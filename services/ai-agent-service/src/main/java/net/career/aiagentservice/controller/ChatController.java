@@ -21,9 +21,10 @@ public class ChatController {
     @PostMapping("/chat")
     public ResponseEntity<ChatResponse> chat(
             @RequestBody ChatRequest request,
-            Authentication auth) {
+            Authentication auth,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String bearerToken) {
         String userId = (auth != null && auth.isAuthenticated()) ? auth.getName() : null;
-        return ResponseEntity.ok(chatService.chat(request, userId));
+        return ResponseEntity.ok(chatService.chat(request, userId, bearerToken));
     }
 
     // Sohbet geçmişini getir

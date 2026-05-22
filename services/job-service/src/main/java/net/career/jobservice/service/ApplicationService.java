@@ -63,6 +63,10 @@ public class ApplicationService {
                 .toList();
     }
 
+    public long countByJobId(UUID jobId) {
+        return applicationRepository.countByJobId(jobId);
+    }
+
     @Transactional
     public ApplicationResponse updateStatus(UUID applicationId, String status, String cognitoUserId) {
         if (!List.of("ACCEPTED", "REJECTED", "PENDING").contains(status)) {

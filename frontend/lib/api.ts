@@ -27,6 +27,7 @@ export const jobsApi = {
   autocompletePosition: (q: string) => api.get(`/api/v1/jobs/autocomplete/position?q=${q}`),
   autocompleteCity: (q: string) => api.get(`/api/v1/jobs/autocomplete/city?q=${q}`),
   apply: (id: string) => api.post(`/api/v1/jobs/${id}/apply`),
+  applicationCount: (id: string) => api.get(`/api/v1/jobs/${id}/application-count`),
 };
 
 // ── Search Service ────────────────────────────────────────────────────────────

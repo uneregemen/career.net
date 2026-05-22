@@ -14,4 +14,7 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     @Query("SELECT a FROM Application a JOIN FETCH a.job j JOIN FETCH j.company c WHERE c.cognitoUserId = :ownerUserId ORDER BY a.appliedAt DESC")
     List<Application> findByJobOwnerCognitoUserId(@Param("ownerUserId") String ownerUserId);
+
+    @Query("SELECT COUNT(a) FROM Application a WHERE a.job.id = :jobId")
+    long countByJobId(@Param("jobId") UUID jobId);
 }

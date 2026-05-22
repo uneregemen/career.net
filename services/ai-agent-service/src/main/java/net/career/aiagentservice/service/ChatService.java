@@ -20,7 +20,7 @@ public class ChatService {
     private final ChatSessionRepository sessionRepository;
     private final GeminiService geminiService;
 
-    public ChatResponse chat(ChatRequest request, String userId) {
+    public ChatResponse chat(ChatRequest request, String userId, String bearerToken) {
         // Mevcut oturumu bul ya da yeni oluştur (MongoDB erişilemezse boş oturum kullan)
         ChatSession session;
         try {
@@ -48,7 +48,7 @@ public class ChatService {
                 .collect(Collectors.toList());
 
         // Gemini'ye gönder
-        Map<String, Object> result = geminiService.chat(history, request.getMessage());
+        Map<String, Object> result = geminiService.chat(history, request.getMessage(), bearerToken);
 
         String aiText = (String) result.get("text");
         List<Map<String, Object>> rawCards = (List<Map<String, Object>>) result.get("jobCards");

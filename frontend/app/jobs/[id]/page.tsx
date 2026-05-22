@@ -2,10 +2,13 @@
 
 import { use, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Building2, Briefcase, Clock, Bookmark, BookmarkCheck, ChevronLeft, Banknote } from "lucide-react";
+import { MapPin, Building2, Briefcase, Clock, Bookmark, BookmarkCheck, ChevronLeft, Banknote, Users } from "lucide-react";
 import { jobsApi } from "@/lib/api";
 import { Job } from "@/types";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getCurrentUser } from "aws-amplify/auth";
+import JobCard from "@/components/JobCard";
 
 const prefLabel: Record<string, string> = {
   FULLTIME: "Tam Zamanlı", PARTTIME: "Yarı Zamanlı", REMOTE: "Uzaktan", HYBRID: "Hibrit",
@@ -40,6 +43,7 @@ const avatarColors = ["bg-blue-500","bg-violet-500","bg-emerald-500","bg-orange-
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [applied, setApplied] = useState(false);
   const [applying, setApplying] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -49,11 +53,30 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     queryFn: () => jobsApi.getById(id).then((r) => r.data),
   });
 
+  const { data: countData } = useQuery<{ count: number }>({
+    queryKey: ["job-count", id],
+    queryFn: () => jobsApi.applicationCount(id).then((r) => r.data),
+    enabled: !!job,
+  });
+
+  const { data: relatedJobs = [] } = useQuery<Job[]>({
+    queryKey: ["related-jobs", job?.city, job?.workingPreference],
+    queryFn: () => jobsApi.nearby(job!.city).then((r) => r.data),
+    enabled: !!job?.city,
+    select: (jobs) => jobs.filter((j) => j.id !== id).slice(0, 3),
+  });
+
   useEffect(() => {
     setSaved(getSaved().includes(id));
   }, [id]);
 
   const handleApply = async () => {
+    try {
+      await getCurrentUser();
+    } catch {
+      router.push(`/auth/login?redirect=/jobs/${id}`);
+      return;
+    }
     setApplying(true);
     try {
       await jobsApi.apply(id);
@@ -79,7 +102,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   return (
     <div className="max-w-4xl mx-auto space-y-4">
 
-      {/* Geri dön */}
       <Link href="/search"
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors">
         <ChevronLeft size={16} /> Aramalara Dön
@@ -87,7 +109,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* ── Sol: Detay ───────────────────────────────────── */}
+        {/* ── Sol: Detay ─────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
 
@@ -102,13 +124,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <button onClick={() => setSaved(toggleSaved(id))}
                 className={`p-2 rounded-xl border transition-colors shrink-0 ${
                   saved ? "border-blue-200 bg-blue-50 text-blue-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                }`}
-                title={saved ? "Kaydedildi" : "Kaydet"}>
+                }`}>
                 {saved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
               </button>
             </div>
 
-            {/* Meta bilgiler */}
             <div className="flex flex-wrap gap-3 mt-4">
               {location && (
                 <span className="flex items-center gap-1.5 text-sm text-gray-500">
@@ -130,10 +150,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   <Clock size={13} /> {timeAgo(job.postedAt)}
                 </span>
               )}
+              {countData !== undefined && (
+                <span className="flex items-center gap-1.5 text-sm text-gray-400">
+                  <Users size={13} /> {countData.count} başvuru
+                </span>
+              )}
             </div>
           </div>
 
-          {/* İş Tanımı */}
           {job.description && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-800 mb-3">İş Tanımı</h2>
@@ -141,7 +165,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
           )}
 
-          {/* Aranan Nitelikler */}
           {job.requirements && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-800 mb-3">Aranan Nitelikler</h2>
@@ -150,8 +173,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           )}
         </div>
 
-        {/* ── Sağ: Başvur kartı ─────────────────────────────── */}
+        {/* ── Sağ: Başvur + ilgili ilanlar ────────────── */}
         <div className="space-y-4">
+          {/* Başvur kartı */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 sticky top-20">
             <div className="flex items-center gap-2 mb-1">
               <Building2 size={15} className="text-gray-400" />
@@ -181,14 +205,31 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <button
               onClick={() => setSaved(toggleSaved(id))}
               className={`w-full mt-2 py-2.5 text-sm font-medium rounded-xl border transition-colors flex items-center justify-center gap-2 ${
-                saved
-                  ? "border-blue-200 bg-blue-50 text-blue-600"
-                  : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                saved ? "border-blue-200 bg-blue-50 text-blue-600" : "border-gray-200 text-gray-500 hover:bg-gray-50"
               }`}
             >
               {saved ? <><BookmarkCheck size={15} /> Kaydedildi</> : <><Bookmark size={15} /> İlanı Kaydet</>}
             </button>
           </div>
+
+          {/* İlgili İlanlar */}
+          {relatedJobs.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">İlgini Çekebilecek İlanlar</h3>
+              <div className="space-y-2">
+                {relatedJobs.map((rj) => (
+                  <Link key={rj.id} href={`/jobs/${rj.id}`}
+                    className="block p-3 rounded-xl hover:bg-gray-50 border border-gray-100 transition-colors">
+                    <p className="text-sm font-medium text-gray-800 line-clamp-1 hover:text-blue-600">{rj.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{rj.companyName}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                      <MapPin size={10} /> {[rj.town, rj.city].filter(Boolean).join(", ")}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

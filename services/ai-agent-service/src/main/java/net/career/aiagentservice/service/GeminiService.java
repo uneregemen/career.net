@@ -23,7 +23,7 @@ public class GeminiService {
     @Value("${gemini.base-url}")
     private String baseUrl;
 
-    public Map<String, Object> chat(List<Map<String, Object>> history, String userMessage) {
+    public Map<String, Object> chat(List<Map<String, Object>> history, String userMessage, String bearerToken) {
         try {
             List<Map<String, Object>> contents = new ArrayList<>(history);
             contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", userMessage))));
@@ -42,7 +42,7 @@ public class GeminiService {
                     .bodyToMono(Map.class)
                     .block();
 
-            return handleResponse(response, contents);
+            return handleResponse(response, contents, bearerToken);
         } catch (Exception e) {
             log.error("Gemini chat hatası: {}", e.getMessage());
             String msg = e.getMessage() != null && e.getMessage().contains("429")
@@ -52,7 +52,7 @@ public class GeminiService {
         }
     }
 
-    private Map<String, Object> handleResponse(Map response, List<Map<String, Object>> contents) {
+    private Map<String, Object> handleResponse(Map response, List<Map<String, Object>> contents, String bearerToken) {
         try {
             List candidates = (List) response.get("candidates");
             Map candidate = (Map) candidates.get(0);
@@ -66,7 +66,7 @@ public class GeminiService {
                 Map<String, Object> args = (Map<String, Object>) functionCall.get("args");
 
                 log.info("Gemini tool call: {} args={}", functionName, args);
-                Object toolResult = executeTool(functionName, args);
+                Object toolResult = executeTool(functionName, args, bearerToken);
 
                 contents.add(Map.of("role", "model", "parts", List.of(Map.of("functionCall", functionCall))));
                 contents.add(Map.of("role", "user", "parts", List.of(Map.of(
@@ -97,7 +97,7 @@ public class GeminiService {
         }
     }
 
-    private Object executeTool(String functionName, Map<String, Object> args) {
+    private Object executeTool(String functionName, Map<String, Object> args, String bearerToken) {
         return switch (functionName) {
             case "search_jobs" -> {
                 String position = (String) args.getOrDefault("position", "");
@@ -116,6 +116,21 @@ public class GeminiService {
                         .retrieve()
                         .bodyToMono(Map.class)
                         .block();
+            }
+            case "apply_job" -> {
+                String jobId = (String) args.get("jobId");
+                if (bearerToken == null || bearerToken.isBlank())
+                    yield Map.of("error", "Başvuru için giriş yapmanız gerekiyor.");
+                try {
+                    yield jobClient.post()
+                            .uri("/api/v1/jobs/" + jobId + "/apply")
+                            .header("Authorization", bearerToken)
+                            .retrieve()
+                            .bodyToMono(Map.class)
+                            .block();
+                } catch (Exception e) {
+                    yield Map.of("error", "Başvuru başarısız: " + e.getMessage());
+                }
             }
             default -> Map.of("error", "Bilinmeyen araç: " + functionName);
         };
@@ -146,6 +161,7 @@ public class GeminiService {
                         "Sen career.net iş arama asistanısın. " +
                         "Kullanıcı iş ararsa search_jobs aracını kullan. " +
                         "İlan detayı isterse get_job_details aracını kullan. " +
+                        "Kullanıcı bir ilana başvurmak isterse apply_job aracını kullan; öncesinde ilan id'sini teyit et. " +
                         "Türkçe veya İngilizce konuşabilirsin. Kısa ve yardımcı ol."))),
                 "contents", contents,
                 "tools", List.of(Map.of("functionDeclarations", List.of(
@@ -169,6 +185,17 @@ public class GeminiService {
                                                 "id", Map.of("type", "string", "description", "İş ilanı UUID'si")
                                         ),
                                         "required", List.of("id")
+                                )
+                        ),
+                        Map.of(
+                                "name", "apply_job",
+                                "description", "Kullanıcı adına bir iş ilanına başvur",
+                                "parameters", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of(
+                                                "jobId", Map.of("type", "string", "description", "Başvurulacak ilanın UUID'si")
+                                        ),
+                                        "required", List.of("jobId")
                                 )
                         )
                 )))
